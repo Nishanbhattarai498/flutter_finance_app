@@ -7,11 +7,7 @@ class SupabaseService {
     required String supabaseUrl,
     required String supabaseAnonKey,
   }) async {
-    await Supabase.initialize(
-      url: 'https://bwryfrjjwwnavusxrsju.supabase.co',
-      anonKey:
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3cnlmcmpqd3duYXZ1c3hyc2p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUzNzQwMDIsImV4cCI6MjA2MDk1MDAwMn0.0E1Q_sSiQPgSy-2nvDFhlmCVs-NcRobnZFziBeaTDuQ',
-    );
+    await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
     _client = Supabase.instance.client;
   }
 
