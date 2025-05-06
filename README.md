@@ -54,16 +54,47 @@ with your actual Supabase credentials.
 flutter run
 ```
 
-## 📂 Project Structure
 
-```
-lib/
-├── screens/           # UI Screens (Login, Dashboard, etc.)
-├── services/          # Supabase service integration
-├── providers/         # Auth, Expense, and Group state management
-├── theme/             # Light and Dark themes
-├── main.dart          # App entry point
-```
+
+## 📁 File Structure
+
+This project is structured to support a modular Flutter application. Here's a brief description of the main files:
+
+### 🔹 `main.dart`
+
+* Entry point of the application.
+
+### 🔹 `lib/models/`
+
+* *(No individual files listed)*: Contains model classes used across the app.
+
+### 🔹 `lib/providers/`
+
+* `auth_provider.dart`: Manages authentication logic and state.
+* `expense_provider.dart`: Handles state and logic related to expenses.
+* `group_provider.dart`: Manages group-related operations and state.
+
+### 🔹 `lib/screens/`
+
+* Contains subfolders (`auth`, `dashboard`, `expenses`, `groups`, `profile`, `settlements`) with UI screens organized by feature. *(Specific files not listed here.)*
+
+### 🔹 `lib/services/`
+
+* `supabase_service.dart`: Handles backend communication via Supabase.
+
+### 🔹 `lib/theme/`
+
+* `app_theme.dart`: Manages global theming for the app (colors, fonts, etc.).
+
+### 🔹 `lib/widgets/`
+
+* `custom_button.dart`: A reusable button widget.
+* `custom_text_field.dart`: A customizable text field widget.
+
+---
+
+
+
 
 ## 🤝 Contributing
 
