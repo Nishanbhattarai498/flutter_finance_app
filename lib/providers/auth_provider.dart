@@ -11,11 +11,24 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   Future<bool> isAuthenticated() async {
-    final user = SupabaseService.currentUser;
-    if (user != null) {
-      _userId = user.id;
-      await _fetchUserProfile();
-      return true;
+    try {
+      // Check for current user first
+      final user = SupabaseService.currentUser;
+      if (user != null) {
+        _userId = user.id;
+        await _fetchUserProfile();
+        return true;
+      }
+
+      // Try to get existing session
+      final session = await SupabaseService.client.auth.currentSession;
+      if (session?.user != null) {
+        _userId = session!.user.id;
+        await _fetchUserProfile();
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Error checking authentication: $e');
     }
     return false;
   }
@@ -137,5 +150,14 @@ class AuthProvider extends ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
+  }
+
+  Future<List<Map<String, dynamic>>> searchUsers(String query) async {
+    try {
+      return await SupabaseService.searchUsers(query);
+    } catch (e) {
+      debugPrint('Error searching users: $e');
+      throw 'Failed to search users: $e';
+    }
   }
 }

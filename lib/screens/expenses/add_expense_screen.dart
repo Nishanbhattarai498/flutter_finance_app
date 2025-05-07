@@ -22,6 +22,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   String _selectedCategory = 'Food';
   Group? _selectedGroup;
   List<String> _selectedParticipants = [];
+  bool _isMonthlyExpense = false;
 
   final List<String> _categories = [
     'Food',
@@ -82,7 +83,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         'group_id': _selectedGroup?.id,
         'description': _descriptionController.text.trim(),
         'amount': double.parse(_amountController.text),
+        'currency': 'NPR',
         'category': _selectedCategory,
+        'is_monthly': _isMonthlyExpense,
         'participants': _selectedParticipants,
         'created_at': DateTime.now().toIso8601String(),
       };
@@ -135,13 +138,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Amount
+              // Amount with NPR prefix
               CustomTextField(
                 controller: _amountController,
-                label: 'Amount',
+                label: 'Amount (NPR)',
                 hint: '0.00',
-                prefixIcon: Icons.attach_money,
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                prefixIcon: Icons.currency_rupee,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter an amount';
@@ -155,6 +158,19 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     return 'Please enter a valid amount';
                   }
                   return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Monthly Expense Switch
+              SwitchListTile(
+                title: const Text('Monthly Recurring Expense'),
+                subtitle: const Text('This expense repeats every month'),
+                value: _isMonthlyExpense,
+                onChanged: (bool value) {
+                  setState(() {
+                    _isMonthlyExpense = value;
+                  });
                 },
               ),
               const SizedBox(height: 16),
@@ -278,6 +294,41 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               ],
 
               const SizedBox(height: 32),
+
+              // Display current month's remaining balance
+              FutureBuilder<void>(
+                future: null, // This will be replaced with actual data
+                builder: (context, snapshot) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Current Month Summary',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Total Expenses: ${expenseProvider.formatAmountNPR(expenseProvider.getCurrentMonthTotal())}',
+                            ),
+                            if (_isMonthlyExpense)
+                              Text(
+                                'Monthly Recurring: ${expenseProvider.formatAmountNPR(expenseProvider.getTotalMonthlyRecurring())}',
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
 
               // Save button
               CustomButton(

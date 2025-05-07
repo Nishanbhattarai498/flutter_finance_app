@@ -74,6 +74,11 @@ class _DashboardHomePage extends StatefulWidget {
 }
 
 class __DashboardHomePageState extends State<_DashboardHomePage> {
+  // Monthly budget - TODO: Make this configurable in settings
+  static const double monthlyBudget = 50000.0; // NPR 50,000 default budget
+  bool _isLoading = true;
+  String? _error;
+
   @override
   void initState() {
     super.initState();
@@ -81,22 +86,44 @@ class __DashboardHomePageState extends State<_DashboardHomePage> {
   }
 
   Future<void> _loadData() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final userId = authProvider.userId;
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
 
-    if (userId != null) {
-      await Provider.of<ExpenseProvider>(
-        context,
-        listen: false,
-      ).fetchUserExpenses(userId);
-      await Provider.of<GroupProvider>(
-        context,
-        listen: false,
-      ).fetchUserGroups(userId);
-      await Provider.of<GroupProvider>(
-        context,
-        listen: false,
-      ).fetchSettlements(userId);
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final userId = authProvider.userId;
+
+      if (userId == null) {
+        setState(() {
+          _error = 'User not authenticated';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      await Future.wait([
+        Provider.of<ExpenseProvider>(context, listen: false)
+            .fetchUserExpenses(userId),
+        Provider.of<GroupProvider>(context, listen: false)
+            .fetchUserGroups(userId),
+        Provider.of<GroupProvider>(context, listen: false)
+            .fetchSettlements(userId),
+      ]);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Failed to load data. Please try again.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -109,131 +136,147 @@ class __DashboardHomePageState extends State<_DashboardHomePage> {
     final authProvider = Provider.of<AuthProvider>(context);
     final expenseProvider = Provider.of<ExpenseProvider>(context);
 
-    // Get user's full name from profile
     final String fullName = authProvider.userProfile?['full_name'] ?? 'User';
-
-    // Get the current month's total expenses
     final double currentMonthTotal = expenseProvider.getCurrentMonthTotal();
-
-    // Get all expenses for recent transactions list
+    final double monthlyRecurring = expenseProvider.getTotalMonthlyRecurring();
     final List<Expense> expenses = expenseProvider.expenses;
 
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: _refreshData,
         child: SafeArea(
-          child: CustomScrollView(
-            slivers: [
-              SliverAppBar(
-                floating: true,
-                pinned: false,
-                snap: true,
-                title: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Hello, ${fullName.split(' ').first}!',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    Text(
-                      'Welcome back to your finance tracker',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.notifications_outlined),
-                    onPressed: () {
-                      // Navigate to notifications screen
-                    },
-                  ),
-                ],
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.all(16.0),
-                sliver: SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Balance card showing monthly spend and remaining budget
-                      BalanceCard(
-                        spent: currentMonthTotal,
-                        budget: 1000.0, // Example budget amount
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Expense chart showing spending over time
-                      Text(
-                        'Expense Trend',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 16),
-                      ExpenseChart(
-                        expenseData: expenseProvider.getMonthlyExpenseTotals(),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Recent expenses list
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            'Recent Expenses',
-                            style: Theme.of(context).textTheme.titleMedium,
+                          const Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: Colors.red,
                           ),
-                          TextButton(
-                            onPressed: () {
-                              // Navigate to all expenses screen
-                            },
-                            child: const Text('See All'),
+                          const SizedBox(height: 16),
+                          Text(
+                            _error!,
+                            style: Theme.of(context).textTheme.titleMedium,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _refreshData,
+                            child: const Text('Try Again'),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Recent expenses list
-              expenses.isEmpty
-                  ? SliverFillRemaining(
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.receipt_long_outlined,
-                              size: 64,
-                              color: Colors.grey,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No expenses yet',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Add your first expense by tapping the + button',
-                              style: Theme.of(context).textTheme.bodySmall,
-                              textAlign: TextAlign.center,
+                    )
+                  : CustomScrollView(
+                      slivers: [
+                        SliverAppBar(
+                          floating: true,
+                          pinned: false,
+                          snap: true,
+                          title: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Hello, ${fullName.split(' ').first}!',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              Text(
+                                'Welcome back to your finance tracker',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                          actions: [
+                            IconButton(
+                              icon: const Icon(Icons.notifications_outlined),
+                              onPressed: () {
+                                // Navigate to notifications screen
+                              },
                             ),
                           ],
                         ),
-                      ),
-                    )
-                  : SliverList(
-                      delegate: SliverChildBuilderDelegate((context, index) {
-                        if (index >= expenses.length) return null;
-                        return RecentExpenseItem(expense: expenses[index]);
-                      }, childCount: expenses.length > 5 ? 5 : expenses.length),
+                        SliverPadding(
+                          padding: const EdgeInsets.all(16.0),
+                          sliver: SliverToBoxAdapter(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                BalanceCard(
+                                  spent: currentMonthTotal,
+                                  budget: monthlyBudget,
+                                  monthlyRecurring: monthlyRecurring,
+                                ),
+                                const SizedBox(height: 24),
+                                Text(
+                                  'Expense Trend',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 16),
+                                ExpenseChart(
+                                  expenseData: expenseProvider.getMonthlyExpenseTotals(),
+                                ),
+                                const SizedBox(height: 24),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Recent Expenses',
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        // TODO: Navigate to all expenses screen
+                                      },
+                                      child: const Text('See All'),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        expenses.isEmpty
+                            ? SliverFillRemaining(
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.receipt_long_outlined,
+                                        size: 64,
+                                        color: Colors.grey,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'No expenses yet',
+                                        style: Theme.of(context).textTheme.titleMedium,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Add your first expense by tapping the + button',
+                                        style: Theme.of(context).textTheme.bodySmall,
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : SliverList(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, index) {
+                                    if (index >= expenses.length) return null;
+                                    return RecentExpenseItem(expense: expenses[index]);
+                                  },
+                                  childCount: expenses.length > 5 ? 5 : expenses.length,
+                                ),
+                              ),
+                        const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
+                      ],
                     ),
-
-              // Bottom padding
-              const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
-            ],
-          ),
         ),
       ),
     );

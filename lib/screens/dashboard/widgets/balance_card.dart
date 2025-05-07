@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_finance_app/providers/expense_provider.dart';
+import 'package:provider/provider.dart';
 
 class BalanceCard extends StatelessWidget {
   final double spent;
   final double budget;
+  final double monthlyRecurring;
 
-  const BalanceCard({Key? key, required this.spent, required this.budget})
-    : super(key: key);
+  const BalanceCard({
+    Key? key, 
+    required this.spent, 
+    required this.budget,
+    required this.monthlyRecurring,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormatter = NumberFormat.currency(symbol: '\$');
+    final expenseProvider = Provider.of<ExpenseProvider>(context);
     final percentage = (spent / budget).clamp(0.0, 1.0);
     final remaining = budget - spent;
 
@@ -38,10 +45,19 @@ class BalanceCard extends StatelessWidget {
                   children: [
                     Text('Spent', style: Theme.of(context).textTheme.bodySmall),
                     Text(
-                      currencyFormatter.format(spent),
+                      expenseProvider.formatAmountNPR(spent),
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
+                    if (monthlyRecurring > 0) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Monthly Recurring: ${expenseProvider.formatAmountNPR(monthlyRecurring)}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 Column(
@@ -52,7 +68,7 @@ class BalanceCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     Text(
-                      currencyFormatter.format(remaining),
+                      expenseProvider.formatAmountNPR(remaining),
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(
                             fontWeight: FontWeight.bold,
@@ -71,9 +87,7 @@ class BalanceCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: percentage,
                 minHeight: 8,
-                backgroundColor: Theme.of(
-                  context,
-                ).colorScheme.primary.withOpacity(0.2),
+                backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
                 valueColor: AlwaysStoppedAnimation<Color>(
                   percentage > 0.9
                       ? Theme.of(context).colorScheme.error

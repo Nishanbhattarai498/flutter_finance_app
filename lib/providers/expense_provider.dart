@@ -114,19 +114,52 @@ class ExpenseProvider extends ChangeNotifier {
     }
   }
 
-  // Get total expenses for the current month
+  // Get remaining balance (considering monthly expenses)
+  double getRemainingBalance(double totalBudget) {
+    final now = DateTime.now();
+    final currentMonth = DateTime(now.year, now.month);
+    final nextMonth = DateTime(now.year, now.month + 1);
+
+    // Calculate one-time expenses for current month
+    double oneTimeExpenses = _expenses
+        .where((expense) {
+          final expenseDate = expense.createdAt;
+          return !expense.isMonthly &&
+              expenseDate.isAfter(currentMonth) &&
+              expenseDate.isBefore(nextMonth);
+        })
+        .fold(0, (sum, expense) => sum + expense.amount);
+
+    // Calculate total monthly recurring expenses
+    double monthlyExpenses = _expenses
+        .where((expense) => expense.isMonthly)
+        .fold(0, (sum, expense) => sum + expense.amount);
+
+    return totalBudget - (oneTimeExpenses + monthlyExpenses);
+  }
+
+  // Get total expenses including monthly recurring ones
   double getCurrentMonthTotal() {
     final now = DateTime.now();
     final currentMonth = DateTime(now.year, now.month);
     final nextMonth = DateTime(now.year, now.month + 1);
 
-    return _expenses
+    // Calculate one-time expenses
+    double oneTimeExpenses = _expenses
         .where((expense) {
           final expenseDate = expense.createdAt;
-          return expenseDate.isAfter(currentMonth) &&
+          return !expense.isMonthly &&
+              expenseDate.isAfter(currentMonth) &&
               expenseDate.isBefore(nextMonth);
         })
         .fold(0, (sum, expense) => sum + expense.amount);
+
+    // Add monthly recurring expenses
+    double monthlyExpenses = _expenses
+        .where((expense) => expense.isMonthly)
+        .fold(0, (sum, expense) => sum + expense.amount);
+
+    return oneTimeExpenses + monthlyExpenses;
   }
 
   // Get monthly expenses totals for chart
@@ -143,18 +176,37 @@ class ExpenseProvider extends ChangeNotifier {
           ? DateTime(month.year, month.month + 1, 0)
           : DateTime(month.year + 1, 1, 0);
 
-      final total = _expenses
+      // Calculate one-time expenses for the month
+      final oneTimeTotal = _expenses
           .where((expense) {
             final date = expense.createdAt;
-            return date.isAfter(startOfMonth) &&
+            return !expense.isMonthly &&
+                date.isAfter(startOfMonth) &&
                 date.isBefore(endOfMonth.add(const Duration(days: 1)));
           })
           .fold(0.0, (sum, expense) => sum + expense.amount);
 
-      monthlyTotals[monthName] = total;
+      // Add monthly recurring expenses
+      final monthlyTotal = _expenses
+          .where((expense) => expense.isMonthly)
+          .fold(0.0, (sum, expense) => sum + expense.amount);
+
+      monthlyTotals[monthName] = oneTimeTotal + monthlyTotal;
     }
 
     return monthlyTotals;
+  }
+
+  // Format amount in NPR
+  String formatAmountNPR(double amount) {
+    return 'NPR ${amount.toStringAsFixed(2)}';
+  }
+
+  // Get total monthly recurring expenses
+  double getTotalMonthlyRecurring() {
+    return _expenses
+        .where((expense) => expense.isMonthly)
+        .fold(0, (sum, expense) => sum + expense.amount);
   }
 
   // Get expense categories distribution

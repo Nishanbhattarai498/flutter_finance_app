@@ -1,5 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_finance_app/providers/expense_provider.dart';
+import 'package:provider/provider.dart';
 
 class ExpenseChart extends StatelessWidget {
   final Map<String, double> expenseData;
@@ -8,6 +10,8 @@ class ExpenseChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final expenseProvider = Provider.of<ExpenseProvider>(context);
+
     if (expenseData.isEmpty) {
       return const SizedBox(
         height: 200,
@@ -35,11 +39,10 @@ class ExpenseChart extends StatelessWidget {
             enabled: true,
             touchTooltipData: BarTouchTooltipData(
               tooltipRoundedRadius: 8,
-
               tooltipPadding: const EdgeInsets.all(8),
               getTooltipItem: (group, groupIndex, rod, rodIndex) {
                 return BarTooltipItem(
-                  '\$${rod.fromY.toStringAsFixed(2)}',
+                  expenseProvider.formatAmountNPR(rod.fromY),
                   const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -49,8 +52,18 @@ class ExpenseChart extends StatelessWidget {
             ),
           ),
           titlesData: FlTitlesData(
-            leftTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (value, meta) {
+                  if (value == 0) return const Text('');
+                  return Text(
+                    'NPR ${value.toInt() / 1000}k',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  );
+                },
+                reservedSize: 50,
+              ),
             ),
             rightTitles: const AxisTitles(
               sideTitles: SideTitles(showTitles: false),
@@ -71,6 +84,17 @@ class ExpenseChart extends StatelessWidget {
                 reservedSize: 30,
               ),
             ),
+          ),
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: maxValue / 5,
+            getDrawingHorizontalLine: (value) {
+              return FlLine(
+                color: Theme.of(context).dividerColor.withOpacity(0.2),
+                strokeWidth: 1,
+              );
+            },
           ),
           borderData: FlBorderData(show: false),
           barGroups: List.generate(

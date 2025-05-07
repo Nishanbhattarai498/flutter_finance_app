@@ -17,12 +17,45 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _searchController = TextEditingController();
+  List<String> selectedFriends = [];
+  List<Map<String, dynamic>> searchResults = [];
 
   @override
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _searchFriends(String query) async {
+    if (query.isEmpty) {
+      setState(() => searchResults = []);
+      return;
+    }
+
+    try {
+      final results = await Provider.of<AuthProvider>(
+        context,
+        listen: false,
+      ).searchUsers(query);
+      setState(() => searchResults = results);
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to search users: $e')));
+    }
+  }
+
+  void _toggleFriendSelection(String userId) {
+    setState(() {
+      if (selectedFriends.contains(userId)) {
+        selectedFriends.remove(userId);
+      } else {
+        selectedFriends.add(userId);
+      }
+    });
   }
 
   Future<void> _createGroup() async {
@@ -37,7 +70,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         return;
       }
 
-      // Create group data
       final groupData = {
         'name': _nameController.text.trim(),
         'description': _descriptionController.text.trim(),
@@ -45,7 +77,10 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         'created_at': DateTime.now().toIso8601String(),
       };
 
-      final result = await groupProvider.createGroup(groupData, []);
+      final result = await groupProvider.createGroup(
+        groupData,
+        selectedFriends,
+      );
 
       if (!mounted) return;
 
@@ -54,22 +89,16 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           const SnackBar(content: Text('Group created successfully')),
         );
 
-        // Find the created group
         await groupProvider.fetchUserGroups(authProvider.userId!);
         final createdGroup = groupProvider.groups.firstWhere(
           (group) => group.id == result['group_id'],
-          orElse: () => null!,
         );
 
-        if (createdGroup != null) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (_) => GroupDetailsScreen(group: createdGroup),
-            ),
-          );
-        } else {
-          Navigator.of(context).pop();
-        }
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => GroupDetailsScreen(group: createdGroup),
+          ),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -92,7 +121,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           child: ListView(
             padding: const EdgeInsets.all(16.0),
             children: [
-              // Group name
               CustomTextField(
                 controller: _nameController,
                 label: 'Group Name',
@@ -107,7 +135,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Description (optional)
               CustomTextField(
                 controller: _descriptionController,
                 label: 'Description (Optional)',
@@ -116,9 +143,68 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                 maxLines: 3,
               ),
 
+              const SizedBox(height: 24),
+
+              // Friend search section
+              Text(
+                'Add Friends to Group',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+
+              CustomTextField(
+                controller: _searchController,
+                label: 'Search Friends',
+                hint: 'Enter name or email',
+                prefixIcon: Icons.search,
+                onChanged: _searchFriends,
+              ),
+
+              // Search results
+              if (searchResults.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Card(
+                  child: Column(
+                    children: searchResults.map((user) {
+                      final userId = user['id'];
+                      final isSelected = selectedFriends.contains(userId);
+                      return ListTile(
+                        leading: CircleAvatar(
+                          child: Text(user['email'][0].toUpperCase()),
+                        ),
+                        title: Text(user['email']),
+                        trailing: Icon(
+                          isSelected
+                              ? Icons.check_circle
+                              : Icons.check_circle_outline,
+                          color: isSelected ? Colors.green : Colors.grey,
+                        ),
+                        onTap: () => _toggleFriendSelection(userId),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+
+              // Selected friends chips
+              if (selectedFriends.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  children: selectedFriends.map((userId) {
+                    final user = searchResults.firstWhere(
+                      (user) => user['id'] == userId,
+                    );
+                    return Chip(
+                      label: Text(user['email']),
+                      onDeleted: () => _toggleFriendSelection(userId),
+                    );
+                  }).toList(),
+                ),
+              ],
+
               const SizedBox(height: 32),
 
-              // Create button
               CustomButton(
                 text: 'Create Group',
                 isLoading: groupProvider.isLoading,

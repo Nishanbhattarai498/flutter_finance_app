@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/models/expense.dart';
 import 'package:flutter_finance_app/screens/expenses/expense_details_screen.dart';
+import 'package:flutter_finance_app/providers/expense_provider.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 class RecentExpenseItem extends StatelessWidget {
   final Expense expense;
@@ -10,7 +12,7 @@ class RecentExpenseItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormatter = NumberFormat.currency(symbol: '\$');
+    final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
     final dateFormatter = DateFormat('MMM d');
 
     // Get category icon
@@ -66,14 +68,53 @@ class RecentExpenseItem extends StatelessWidget {
           ),
         );
       },
-      leading: CircleAvatar(
-        backgroundColor: categoryColor.withOpacity(0.2),
-        child: Icon(categoryIcon, color: categoryColor),
+      leading: Stack(
+        children: [
+          CircleAvatar(
+            backgroundColor: categoryColor.withOpacity(0.2),
+            child: Icon(categoryIcon, color: categoryColor),
+          ),
+          if (expense.isMonthly)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.secondary,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.repeat,
+                  size: 12,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+        ],
       ),
-      title: Text(
-        expense.description,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              expense.description,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (expense.isMonthly)
+            Padding(
+              padding: const EdgeInsets.only(left: 4),
+              child: Tooltip(
+                message: 'Monthly Recurring Expense',
+                child: Icon(
+                  Icons.repeat,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+              ),
+            ),
+        ],
       ),
       subtitle: Row(
         children: [
@@ -91,7 +132,7 @@ class RecentExpenseItem extends StatelessWidget {
         ],
       ),
       trailing: Text(
-        currencyFormatter.format(expense.amount),
+        expenseProvider.formatAmountNPR(expense.amount),
         style: TextStyle(
           fontWeight: FontWeight.bold,
           color: Theme.of(context).colorScheme.primary,

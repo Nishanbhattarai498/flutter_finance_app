@@ -1,3 +1,4 @@
+import 'package:flutter_finance_app/secrets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseService {
@@ -7,7 +8,11 @@ class SupabaseService {
     required String supabaseUrl,
     required String supabaseAnonKey,
   }) async {
-    await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+    await Supabase.initialize(
+      url: Secrets.supabaseUrl,
+      anonKey: Secrets.supabaseAnonKey,
+      debug: true,
+    );
     _client = Supabase.instance.client;
   }
 
@@ -186,5 +191,15 @@ class SupabaseService {
 
   static Future<void> addSettlement(Map<String, dynamic> data) async {
     await _client.from('settlements').insert(data);
+  }
+
+  // User Search
+  static Future<List<Map<String, dynamic>>> searchUsers(String query) async {
+    final response = await _client
+        .from('profiles')
+        .select()
+        .ilike('email', '%$query%')
+        .limit(10);
+    return List<Map<String, dynamic>>.from(response);
   }
 }
