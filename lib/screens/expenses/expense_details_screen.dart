@@ -1,224 +1,194 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/models/expense.dart';
 import 'package:flutter_finance_app/providers/expense_provider.dart';
+import 'package:flutter_finance_app/theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 class ExpenseDetailsScreen extends StatelessWidget {
   final Expense expense;
 
-  const ExpenseDetailsScreen({Key? key, required this.expense})
-    : super(key: key);
+  const ExpenseDetailsScreen({
+    Key? key,
+    required this.expense,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormatter = NumberFormat.currency(symbol: '\$');
-    final dateFormatter = DateFormat('MMMM d, yyyy');
-
-    // Get category icon
-    IconData categoryIcon = Icons.receipt_outlined;
-    Color categoryColor = Colors.blue;
-
-    switch (expense.category.toLowerCase()) {
-      case 'food':
-        categoryIcon = Icons.restaurant_outlined;
-        categoryColor = Colors.orange;
-        break;
-      case 'transport':
-        categoryIcon = Icons.directions_car_outlined;
-        categoryColor = Colors.green;
-        break;
-      case 'shopping':
-        categoryIcon = Icons.shopping_bag_outlined;
-        categoryColor = Colors.purple;
-        break;
-      case 'entertainment':
-        categoryIcon = Icons.movie_outlined;
-        categoryColor = Colors.red;
-        break;
-      case 'bills':
-        categoryIcon = Icons.receipt_outlined;
-        categoryColor = Colors.blue;
-        break;
-      case 'healthcare':
-        categoryIcon = Icons.medical_services_outlined;
-        categoryColor = Colors.teal;
-        break;
-      case 'travel':
-        categoryIcon = Icons.flight_outlined;
-        categoryColor = Colors.amber;
-        break;
-      case 'other':
-        categoryIcon = Icons.category_outlined;
-        categoryColor = Colors.grey;
-        break;
-    }
+    final dateFormatter = DateFormat('MMM d, y');
+    final currencyFormat = NumberFormat.currency(symbol: 'NPR ');
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Expense Details'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit_outlined),
+            icon: const Icon(Icons.edit),
             onPressed: () {
               // TODO: Navigate to edit expense screen
             },
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: () {
-              _showDeleteDialog(context);
-            },
+            icon: const Icon(Icons.delete),
+            onPressed: () => _showDeleteConfirmation(context),
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Expense header with amount
             Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(16),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Category icon
-                    CircleAvatar(
-                      radius: 32,
-                      backgroundColor: categoryColor.withOpacity(0.2),
-                      child: Icon(categoryIcon, color: categoryColor, size: 32),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Description
                     Text(
-                      expense.description,
+                      expense.title,
                       style: Theme.of(context).textTheme.headlineSmall,
-                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
-
-                    // Amount
                     Text(
-                      currencyFormatter.format(expense.amount),
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.bold,
+                      expense.description ?? 'No description',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: AppTheme.textColorLight,
                           ),
                     ),
-                    const SizedBox(height: 8),
-
-                    // Date and category
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          currencyFormat.format(expense.amount),
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                color: AppTheme.errorColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getCategoryColor(expense.category).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _getCategoryIcon(expense.category),
+                                size: 16,
+                                color: _getCategoryColor(expense.category),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                expense.category,
+                                style: TextStyle(
+                                  color: _getCategoryColor(expense.category),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
                     Text(
-                      '${dateFormatter.format(expense.createdAt)} • ${expense.category}',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      '${dateFormatter.format(expense.date)} • ${expense.category}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.textColorLight,
+                          ),
                     ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 24),
-
-            // Payer info
-            _buildInfoCard(
-              context,
-              'Paid by',
-              expense.user?['full_name'] ?? 'Unknown',
-              Icons.person_outline,
-            ),
-            const SizedBox(height: 16),
-
-            // Group info (if any)
-            if (expense.group != null)
-              _buildInfoCard(
-                context,
-                'Group',
-                expense.group!['name'],
-                Icons.group_outlined,
-              ),
-            if (expense.group != null) const SizedBox(height: 16),
-
-            // Participants
-            if (expense.participants.isNotEmpty) ...[
-              const Text(
-                'Split with:',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 8),
-
-              Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: expense.participants.length,
-                  itemBuilder: (context, index) {
-                    final participantId = expense.participants[index];
-
-                    // Find participant name if group is available
-                    String participantName = 'Unknown';
-                    if (expense.group != null) {
-                      final member = (expense.group!['members'] as List?)
-                          ?.firstWhere(
-                            (m) => m['user_id'] == participantId,
-                            orElse: () => null,
-                          );
-
-                      if (member != null && member['user'] != null) {
-                        participantName = member['user']['full_name'];
-                      }
-                    }
-
-                    // Calculate split amount
-                    final splitAmount =
-                        expense.amount / expense.participants.length;
-
-                    return ListTile(
-                      leading: const CircleAvatar(child: Icon(Icons.person)),
-                      title: Text(participantName),
-                      trailing: Text(
-                        currencyFormatter.format(splitAmount),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Details',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildDetailRow(
+                      context,
+                      'Paid by',
+                      expense.user?['full_name'] ?? 'Unknown',
+                    ),
+                    if (expense.group != null) ...[
+                      const SizedBox(height: 12),
+                      _buildDetailRow(
+                        context,
+                        'Group',
+                        expense.group!['name'],
                       ),
-                    );
-                  },
+                    ],
+                    if (expense.group != null) const SizedBox(height: 16),
+                    if (expense.participants.isNotEmpty) ...[
+                      Text(
+                        'Split between',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: expense.participants.length,
+                        itemBuilder: (context, index) {
+                          final participantId = expense.participants[index];
+                          String participantName = 'Unknown';
+
+                          if (expense.group != null) {
+                            final member = (expense.group!['members'] as List?)
+                                ?.firstWhere(
+                                  (m) => m['user_id'] == participantId,
+                                  orElse: () => null,
+                                );
+                            if (member != null) {
+                              participantName = member['user']['full_name'] ?? 'Unknown';
+                            }
+                          }
+
+                          final shareAmount =
+                              expense.amount / expense.participants.length;
+
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: CircleAvatar(
+                              backgroundColor: AppTheme.primaryColorLight,
+                              child: Text(
+                                participantName[0].toUpperCase(),
+                                style: const TextStyle(
+                                  color: AppTheme.primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            title: Text(participantName),
+                            trailing: Text(
+                              currencyFormat.format(shareAmount),
+                              style: const TextStyle(
+                                color: AppTheme.textColorLight,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ],
                 ),
               ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoCard(
-    BuildContext context,
-    String title,
-    String value,
-    IconData icon,
-  ) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            Icon(icon, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: Theme.of(context).textTheme.bodySmall),
-                Text(value, style: Theme.of(context).textTheme.titleMedium),
-              ],
             ),
           ],
         ),
@@ -226,12 +196,34 @@ class ExpenseDetailsScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _showDeleteDialog(BuildContext context) async {
+  Widget _buildDetailRow(BuildContext context, String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textColorLight,
+              ),
+        ),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showDeleteConfirmation(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Expense'),
-        content: const Text('Are you sure you want to delete this expense?'),
+        content: const Text(
+          'Are you sure you want to delete this expense? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -239,32 +231,74 @@ class ExpenseDetailsScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.errorColor,
+            ),
             child: const Text('Delete'),
           ),
         ],
       ),
     );
 
-    if (confirmed == true) {
-      // Delete the expense
-      final expenseProvider = Provider.of<ExpenseProvider>(
-        context,
-        listen: false,
-      );
-      final success = await expenseProvider.deleteExpense(expense.id);
-
-      if (!context.mounted) return;
-
-      if (success) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Expense deleted')));
-        Navigator.of(context).pop();
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(expenseProvider.errorMessage)));
+    if (confirmed == true && context.mounted) {
+      try {
+        final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+        await expenseProvider.deleteExpense(expense.id);
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete expense: ${e.toString()}'),
+              backgroundColor: AppTheme.errorColor,
+            ),
+          );
+        }
       }
+    }
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'food':
+        return Icons.restaurant;
+      case 'transportation':
+        return Icons.directions_car;
+      case 'shopping':
+        return Icons.shopping_bag;
+      case 'entertainment':
+        return Icons.movie;
+      case 'bills':
+        return Icons.receipt;
+      case 'health':
+        return Icons.medical_services;
+      case 'education':
+        return Icons.school;
+      default:
+        return Icons.category;
+    }
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'food':
+        return Colors.orange;
+      case 'transportation':
+        return Colors.blue;
+      case 'shopping':
+        return Colors.pink;
+      case 'entertainment':
+        return Colors.purple;
+      case 'bills':
+        return Colors.red;
+      case 'health':
+        return Colors.green;
+      case 'education':
+        return Colors.teal;
+      default:
+        return AppTheme.primaryColor;
     }
   }
 }

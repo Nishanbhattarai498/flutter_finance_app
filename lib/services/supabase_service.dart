@@ -9,8 +9,8 @@ class SupabaseService {
     required String supabaseAnonKey,
   }) async {
     await Supabase.initialize(
-      url: Secrets.supabaseUrl,
-      anonKey: Secrets.supabaseAnonKey,
+      url: supabaseUrl,
+      anonKey: supabaseAnonKey,
       debug: true,
     );
     _client = Supabase.instance.client;
@@ -97,8 +97,8 @@ class SupabaseService {
 
   static User? get currentUser => _client.auth.currentUser;
 
-  // Users
-  static Future<Map<String, dynamic>?> getUserProfile(String userId) async {
+  // Profile methods
+  static Future<Map<String, dynamic>> getUserProfile(String userId) async {
     final response = await _client
         .from('profiles')
         .select()
@@ -111,95 +111,210 @@ class SupabaseService {
     String userId,
     Map<String, dynamic> data,
   ) async {
-    await _client.from('profiles').update(data).eq('id', userId);
+    await _client
+        .from('profiles')
+        .update({
+          ...data,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', userId);
   }
 
-  // Expenses
-  static Future<List<Map<String, dynamic>>> getExpenses() async {
+  static Future<List<Map<String, dynamic>>> searchUsers(String query) async {
     final response = await _client
-        .from('expenses')
-        .select('*, user:profiles(*), group:groups(*)')
-        .order('created_at', ascending: false);
+        .from('profiles')
+        .select()
+        .ilike('full_name', '%$query%')
+        .limit(10);
     return List<Map<String, dynamic>>.from(response);
   }
 
-  static Future<List<Map<String, dynamic>>> getUserExpenses(
-    String userId,
+  // Group methods
+  Future<List<Map<String, dynamic>>> getUserGroups() async {
+    final userId = currentUser?.id;
+    if (userId == null) throw 'User not authenticated';
+
+    final response = await _client
+        .from('group_members')
+        .select('*, groups(*)')
+        .eq('user_id', userId);
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<Map<String, dynamic>> createGroup(
+    String name,
+    String? description,
+  ) async {
+    final userId = currentUser?.id;
+    if (userId == null) throw 'User not authenticated';
+
+    final response = await _client.from('groups').insert({
+      'name': name,
+      'description': description,
+      'created_by': userId,
+      'created_at': DateTime.now().toIso8601String(),
+    }).select().single();
+
+    // Add creator as admin member
+    await _client.from('group_members').insert({
+      'group_id': response['id'],
+      'user_id': userId,
+      'role': 'admin',
+      'created_at': DateTime.now().toIso8601String(),
+    });
+
+    return response;
+  }
+
+  Future<Map<String, dynamic>> updateGroup(
+    String groupId,
+    String name,
+    String? description,
   ) async {
     final response = await _client
-        .from('expenses')
-        .select('*, user:profiles(*), group:groups(*)')
-        .or('user_id.eq.$userId,participants.cs.{$userId}')
-        .order('created_at', ascending: false);
-    return List<Map<String, dynamic>>.from(response);
-  }
-
-  static Future<void> addExpense(Map<String, dynamic> data) async {
-    await _client.from('expenses').insert(data);
-  }
-
-  static Future<void> updateExpense(int id, Map<String, dynamic> data) async {
-    await _client.from('expenses').update(data).eq('id', id);
-  }
-
-  static Future<void> deleteExpense(int id) async {
-    await _client.from('expenses').delete().eq('id', id);
-  }
-
-  // Groups
-  static Future<List<Map<String, dynamic>>> getGroups() async {
-    final response = await _client
         .from('groups')
-        .select('*, members:group_members(*, user:profiles(*))')
-        .order('name');
-    return List<Map<String, dynamic>>.from(response);
-  }
-
-  static Future<List<Map<String, dynamic>>> getUserGroups(String userId) async {
-    final response = await _client
-        .from('groups')
-        .select('*, members:group_members!inner(*, user:profiles(*))')
-        .eq('members.user_id', userId)
-        .order('name');
-    return List<Map<String, dynamic>>.from(response);
-  }
-
-  static Future<int> createGroup(Map<String, dynamic> data) async {
-    final response = await _client
-        .from('groups')
-        .insert(data)
-        .select('id')
+        .update({
+          'name': name,
+          'description': description,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', groupId)
+        .select()
         .single();
-    return response['id'];
+    return response;
   }
 
-  static Future<void> addMemberToGroup(Map<String, dynamic> data) async {
-    await _client.from('group_members').insert(data);
+  Future<void> deleteGroup(String groupId) async {
+    await _client.from('groups').delete().eq('id', groupId);
   }
 
-  // Settlements
-  static Future<List<Map<String, dynamic>>> getSettlements(
+  Future<Map<String, dynamic>> addGroupMember(
+    String groupId,
+    String userId,
+    String role,
+  ) async {
+    await _client.from('group_members').insert({
+      'group_id': groupId,
+      'user_id': userId,
+      'role': role,
+      'created_at': DateTime.now().toIso8601String(),
+    });
+
+    final response = await _client
+        .from('groups')
+        .select('*, group_members(*)')
+        .eq('id', groupId)
+        .single();
+    return response;
+  }
+
+  Future<Map<String, dynamic>> removeGroupMember(
+    String groupId,
     String userId,
   ) async {
+    await _client
+        .from('group_members')
+        .delete()
+        .eq('group_id', groupId)
+        .eq('user_id', userId);
+
+    final response = await _client
+        .from('groups')
+        .select('*, group_members(*)')
+        .eq('id', groupId)
+        .single();
+    return response;
+  }
+
+  // Expense methods
+  Future<List<Map<String, dynamic>>> getUserExpenses() async {
+    final userId = currentUser?.id;
+    if (userId == null) throw 'User not authenticated';
+
+    final response = await _client
+        .from('expenses')
+        .select()
+        .or('user_id.eq.$userId,participants.cs.{${userId}}')
+        .order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<Map<String, dynamic>> createExpense(Map<String, dynamic> data) async {
+    final response = await _client
+        .from('expenses')
+        .insert(data)
+        .select()
+        .single();
+    return response;
+  }
+
+  Future<Map<String, dynamic>> updateExpense(
+    String expenseId,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await _client
+        .from('expenses')
+        .update({
+          ...data,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', expenseId)
+        .select()
+        .single();
+    return response;
+  }
+
+  Future<void> deleteExpense(String expenseId) async {
+    await _client.from('expenses').delete().eq('id', expenseId);
+  }
+
+  // Settlement methods
+  Future<List<Map<String, dynamic>>> getUserSettlements() async {
+    final userId = currentUser?.id;
+    if (userId == null) throw 'User not authenticated';
+
     final response = await _client
         .from('settlements')
-        .select('*, payer:profiles(*), receiver:profiles(*)')
+        .select()
         .or('payer_id.eq.$userId,receiver_id.eq.$userId')
         .order('created_at', ascending: false);
     return List<Map<String, dynamic>>.from(response);
   }
 
-  static Future<void> addSettlement(Map<String, dynamic> data) async {
-    await _client.from('settlements').insert(data);
+  Future<Map<String, dynamic>> createSettlement({
+    required double amount,
+    required String payerId,
+    required String receiverId,
+    String? groupId,
+  }) async {
+    final response = await _client.from('settlements').insert({
+      'amount': amount,
+      'payer_id': payerId,
+      'receiver_id': receiverId,
+      'group_id': groupId,
+      'status': 'pending',
+      'created_at': DateTime.now().toIso8601String(),
+    }).select().single();
+    return response;
   }
 
-  // User Search
-  static Future<List<Map<String, dynamic>>> searchUsers(String query) async {
+  Future<Map<String, dynamic>> updateSettlementStatus(
+    String settlementId,
+    String status,
+  ) async {
     final response = await _client
-        .from('profiles')
+        .from('settlements')
+        .update({
+          'status': status,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', settlementId)
         .select()
-        .ilike('email', '%$query%')
-        .limit(10);
-    return List<Map<String, dynamic>>.from(response);
+        .single();
+    return response;
+  }
+
+  Future<void> deleteSettlement(String settlementId) async {
+    await _client.from('settlements').delete().eq('id', settlementId);
   }
 }

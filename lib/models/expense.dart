@@ -1,14 +1,19 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 class Expense {
-  final int id;
+  final String id;
+  final String title;
+  final double amount;
+  final DateTime date;
+  final String category;
+  final String? description;
   final String userId;
   final String? groupId;
-  final String description;
-  final double amount;
-  final String currency;
-  final String category;
+  final bool isRecurring;
+  final String? recurringFrequency;
   final DateTime createdAt;
+  final DateTime updatedAt;
   final bool isMonthly;
   final List<String> participants;
   final Map<String, dynamic>? user;
@@ -16,60 +21,78 @@ class Expense {
 
   Expense({
     required this.id,
+    required this.title,
+    required this.amount,
+    required this.date,
+    required this.category,
+    this.description,
     required this.userId,
     this.groupId,
-    required this.description,
-    required this.amount,
-    this.currency = 'NPR',
-    required this.category,
+    this.isRecurring = false,
+    this.recurringFrequency,
     required this.createdAt,
+    required this.updatedAt,
     this.isMonthly = false,
-    required this.participants,
+    this.participants = const [],
     this.user,
     this.group,
   });
 
   factory Expense.fromJson(Map<String, dynamic> json) {
     return Expense(
-      id: json['id'],
-      userId: json['user_id'],
-      groupId: json['group_id'],
-      description: json['description'],
+      id: json['id'] as String,
+      title: json['title'] as String,
       amount: (json['amount'] as num).toDouble(),
-      currency: json['currency'] ?? 'NPR',
-      category: json['category'],
-      createdAt: DateTime.parse(json['created_at']),
-      isMonthly: json['is_monthly'] ?? false,
+      date: DateTime.parse(json['date'] as String),
+      category: json['category'] as String,
+      description: json['description'] as String?,
+      userId: json['user_id'] as String,
+      groupId: json['group_id'] as String?,
+      isRecurring: json['is_recurring'] as bool? ?? false,
+      recurringFrequency: json['recurring_frequency'] as String?,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+      isMonthly: json['is_monthly'] as bool? ?? false,
       participants: List<String>.from(json['participants'] ?? []),
-      user: json['user'],
-      group: json['group'],
+      user: json['user'] as Map<String, dynamic>?,
+      group: json['group'] as Map<String, dynamic>?,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'title': title,
+      'amount': amount,
+      'date': date.toIso8601String(),
+      'category': category,
+      'description': description,
       'user_id': userId,
       'group_id': groupId,
-      'description': description,
-      'amount': amount,
-      'currency': currency,
-      'category': category,
+      'is_recurring': isRecurring,
+      'recurring_frequency': recurringFrequency,
       'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
       'is_monthly': isMonthly,
       'participants': participants,
+      'user': user,
+      'group': group,
     };
   }
 
   Expense copyWith({
-    int? id,
+    String? id,
+    String? title,
+    double? amount,
+    DateTime? date,
+    String? category,
+    String? description,
     String? userId,
     String? groupId,
-    String? description,
-    double? amount,
-    String? currency,
-    String? category,
+    bool? isRecurring,
+    String? recurringFrequency,
     DateTime? createdAt,
+    DateTime? updatedAt,
     bool? isMonthly,
     List<String>? participants,
     Map<String, dynamic>? user,
@@ -77,13 +100,17 @@ class Expense {
   }) {
     return Expense(
       id: id ?? this.id,
+      title: title ?? this.title,
+      amount: amount ?? this.amount,
+      date: date ?? this.date,
+      category: category ?? this.category,
+      description: description ?? this.description,
       userId: userId ?? this.userId,
       groupId: groupId ?? this.groupId,
-      description: description ?? this.description,
-      amount: amount ?? this.amount,
-      currency: currency ?? this.currency,
-      category: category ?? this.category,
+      isRecurring: isRecurring ?? this.isRecurring,
+      recurringFrequency: recurringFrequency ?? this.recurringFrequency,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       isMonthly: isMonthly ?? this.isMonthly,
       participants: participants ?? this.participants,
       user: user ?? this.user,
@@ -92,21 +119,24 @@ class Expense {
   }
 
   // Calculate monthly amount if it's a monthly expense
-  double get monthlyAmount => isMonthly ? amount : 0;
+  double get monthlyAmount => isRecurring ? amount : 0;
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-
     return other is Expense &&
         other.id == id &&
+        other.title == title &&
+        other.amount == amount &&
+        other.date == date &&
+        other.category == category &&
+        other.description == description &&
         other.userId == userId &&
         other.groupId == groupId &&
-        other.description == description &&
-        other.amount == amount &&
-        other.currency == currency &&
-        other.category == category &&
+        other.isRecurring == isRecurring &&
+        other.recurringFrequency == recurringFrequency &&
         other.createdAt == createdAt &&
+        other.updatedAt == updatedAt &&
         other.isMonthly == isMonthly &&
         listEquals(other.participants, participants);
   }
@@ -114,13 +144,17 @@ class Expense {
   @override
   int get hashCode {
     return id.hashCode ^
+        title.hashCode ^
+        amount.hashCode ^
+        date.hashCode ^
+        category.hashCode ^
+        description.hashCode ^
         userId.hashCode ^
         groupId.hashCode ^
-        description.hashCode ^
-        amount.hashCode ^
-        currency.hashCode ^
-        category.hashCode ^
+        isRecurring.hashCode ^
+        recurringFrequency.hashCode ^
         createdAt.hashCode ^
+        updatedAt.hashCode ^
         isMonthly.hashCode ^
         participants.hashCode;
   }

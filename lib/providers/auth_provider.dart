@@ -5,10 +5,28 @@ class AuthProvider extends ChangeNotifier {
   String? _userId;
   Map<String, dynamic>? _userProfile;
   bool _isLoading = false;
+  bool _isAuthenticated = false;
 
   String? get userId => _userId;
   Map<String, dynamic>? get userProfile => _userProfile;
   bool get isLoading => _isLoading;
+  bool get isAuthenticated => _isAuthenticated;
+
+  Future<void> checkAuth() async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      _isAuthenticated = await isAuthenticated();
+      
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      _isAuthenticated = false;
+      notifyListeners();
+    }
+  }
 
   Future<bool> isAuthenticated() async {
     try {
@@ -56,6 +74,7 @@ class AuthProvider extends ChangeNotifier {
 
       _userId = response.user?.id;
       await _fetchUserProfile();
+      _isAuthenticated = true;
 
       _isLoading = false;
       notifyListeners();
@@ -68,6 +87,7 @@ class AuthProvider extends ChangeNotifier {
       };
     } catch (e) {
       _isLoading = false;
+      _isAuthenticated = false;
       notifyListeners();
 
       return {'success': false, 'message': e.toString()};
@@ -127,6 +147,7 @@ class AuthProvider extends ChangeNotifier {
       await SupabaseService.signOut();
       _userId = null;
       _userProfile = null;
+      _isAuthenticated = false;
     } catch (e) {
       debugPrint('Error signing out: $e');
     }

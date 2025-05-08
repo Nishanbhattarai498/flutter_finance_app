@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_finance_app/theme/app_theme.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_finance_app/providers/expense_provider.dart';
-import 'package:provider/provider.dart';
 
 class BalanceCard extends StatelessWidget {
   final double spent;
@@ -9,75 +8,43 @@ class BalanceCard extends StatelessWidget {
   final double monthlyRecurring;
 
   const BalanceCard({
-    Key? key, 
-    required this.spent, 
+    Key? key,
+    required this.spent,
     required this.budget,
     required this.monthlyRecurring,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final expenseProvider = Provider.of<ExpenseProvider>(context);
-    final percentage = (spent / budget).clamp(0.0, 1.0);
     final remaining = budget - spent;
-
-    final now = DateTime.now();
-    final monthName = DateFormat('MMMM').format(now);
+    final progress = spent / budget;
+    final currencyFormat = NumberFormat.currency(symbol: 'NPR ');
 
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '$monthName Budget',
+              'Monthly Budget',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Spent', style: Theme.of(context).textTheme.bodySmall),
-                    Text(
-                      expenseProvider.formatAmountNPR(spent),
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    if (monthlyRecurring > 0) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Monthly Recurring: ${expenseProvider.formatAmountNPR(monthlyRecurring)}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.secondary,
-                        ),
-                      ),
-                    ],
-                  ],
+                _buildAmountColumn(
+                  context,
+                  'Spent',
+                  currencyFormat.format(spent),
+                  AppTheme.errorColor,
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Remaining',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    Text(
-                      expenseProvider.formatAmountNPR(remaining),
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: remaining < 0
-                                ? Theme.of(context).colorScheme.error
-                                : Theme.of(context).colorScheme.primary,
-                          ),
-                    ),
-                  ],
+                _buildAmountColumn(
+                  context,
+                  'Remaining',
+                  currencyFormat.format(remaining),
+                  AppTheme.successColor,
                 ),
               ],
             ),
@@ -85,24 +52,59 @@ class BalanceCard extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: LinearProgressIndicator(
-                value: percentage,
-                minHeight: 8,
-                backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                value: progress.clamp(0.0, 1.0),
+                backgroundColor: AppTheme.primaryColorLight,
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  percentage > 0.9
-                      ? Theme.of(context).colorScheme.error
-                      : Theme.of(context).colorScheme.primary,
+                  progress > 1.0 ? AppTheme.errorColor : AppTheme.primaryColor,
                 ),
+                minHeight: 8,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              '${(percentage * 100).round()}% of budget used',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            if (monthlyRecurring > 0) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.repeat,
+                    size: 16,
+                    color: AppTheme.textColorLight,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Monthly Recurring: ${currencyFormat.format(monthlyRecurring)}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAmountColumn(
+    BuildContext context,
+    String label,
+    String amount,
+    Color color,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          amount,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: color,
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+      ],
     );
   }
 }

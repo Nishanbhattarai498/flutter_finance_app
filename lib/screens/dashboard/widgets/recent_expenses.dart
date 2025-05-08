@@ -4,140 +4,128 @@ import 'package:flutter_finance_app/screens/expenses/expense_details_screen.dart
 import 'package:flutter_finance_app/providers/expense_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_finance_app/theme/app_theme.dart';
 
 class RecentExpenseItem extends StatelessWidget {
   final Expense expense;
 
-  const RecentExpenseItem({Key? key, required this.expense}) : super(key: key);
+  const RecentExpenseItem({
+    Key? key,
+    required this.expense,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
-    final dateFormatter = DateFormat('MMM d');
+    final currencyFormat = NumberFormat.currency(symbol: 'NPR ');
 
-    // Get category icon
-    IconData categoryIcon = Icons.receipt_outlined;
-    Color categoryColor = Colors.blue;
-
-    switch (expense.category.toLowerCase()) {
-      case 'food':
-        categoryIcon = Icons.restaurant_outlined;
-        categoryColor = Colors.orange;
-        break;
-      case 'transport':
-        categoryIcon = Icons.directions_car_outlined;
-        categoryColor = Colors.green;
-        break;
-      case 'shopping':
-        categoryIcon = Icons.shopping_bag_outlined;
-        categoryColor = Colors.purple;
-        break;
-      case 'entertainment':
-        categoryIcon = Icons.movie_outlined;
-        categoryColor = Colors.red;
-        break;
-      case 'bills':
-        categoryIcon = Icons.receipt_outlined;
-        categoryColor = Colors.blue;
-        break;
-      case 'healthcare':
-        categoryIcon = Icons.medical_services_outlined;
-        categoryColor = Colors.teal;
-        break;
-      case 'travel':
-        categoryIcon = Icons.flight_outlined;
-        categoryColor = Colors.amber;
-        break;
-      case 'other':
-        categoryIcon = Icons.category_outlined;
-        categoryColor = Colors.grey;
-        break;
-    }
-
-    // Get user name (payer)
-    final String payerName = expense.user?['full_name'] ?? 'You';
-
-    // Get group name if it exists
-    final String? groupName = expense.group?['name'];
-
-    return ListTile(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => ExpenseDetailsScreen(expense: expense),
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: CircleAvatar(
+          backgroundColor: _getCategoryColor(expense.category).withOpacity(0.1),
+          child: Icon(
+            _getCategoryIcon(expense.category),
+            color: _getCategoryColor(expense.category),
           ),
-        );
-      },
-      leading: Stack(
-        children: [
-          CircleAvatar(
-            backgroundColor: categoryColor.withOpacity(0.2),
-            child: Icon(categoryIcon, color: categoryColor),
-          ),
-          if (expense.isMonthly)
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondary,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.repeat,
-                  size: 12,
-                  color: Colors.white,
-                ),
-              ),
+        ),
+        title: Text(
+          expense.title,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text(
+              expense.category,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textColorLight,
+                  ),
             ),
-        ],
-      ),
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              expense.description,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          if (expense.isMonthly)
-            Padding(
-              padding: const EdgeInsets.only(left: 4),
-              child: Tooltip(
-                message: 'Monthly Recurring Expense',
-                child: Icon(
-                  Icons.repeat,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.secondary,
-                ),
-              ),
-            ),
-        ],
-      ),
-      subtitle: Row(
-        children: [
-          Text(dateFormatter.format(expense.createdAt)),
-          if (groupName != null) ...[
-            const Text(' • '),
-            Expanded(
-              child: Text(
-                groupName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+            const SizedBox(height: 4),
+            Text(
+              DateFormat('MMM d, y').format(expense.date),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textColorLight,
+                  ),
             ),
           ],
-        ],
-      ),
-      trailing: Text(
-        expenseProvider.formatAmountNPR(expense.amount),
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: Theme.of(context).colorScheme.primary,
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              currencyFormat.format(expense.amount),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppTheme.errorColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            if (expense.isRecurring) ...[
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColorLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  expense.recurringFrequency ?? 'Monthly',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'food':
+        return Icons.restaurant;
+      case 'transportation':
+        return Icons.directions_car;
+      case 'shopping':
+        return Icons.shopping_bag;
+      case 'entertainment':
+        return Icons.movie;
+      case 'bills':
+        return Icons.receipt;
+      case 'health':
+        return Icons.medical_services;
+      case 'education':
+        return Icons.school;
+      default:
+        return Icons.category;
+    }
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'food':
+        return Colors.orange;
+      case 'transportation':
+        return Colors.blue;
+      case 'shopping':
+        return Colors.pink;
+      case 'entertainment':
+        return Colors.purple;
+      case 'bills':
+        return Colors.red;
+      case 'health':
+        return Colors.green;
+      case 'education':
+        return Colors.teal;
+      default:
+        return AppTheme.primaryColor;
+    }
   }
 }

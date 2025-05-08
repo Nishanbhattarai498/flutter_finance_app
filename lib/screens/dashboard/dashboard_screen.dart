@@ -3,6 +3,7 @@ import 'package:flutter_finance_app/models/expense.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
 import 'package:flutter_finance_app/providers/expense_provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
+import 'package:flutter_finance_app/providers/settlement_provider.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/balance_card.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/expense_chart.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/recent_expenses.dart';
@@ -16,52 +17,96 @@ class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
 
   @override
-  _DashboardScreenState createState() => _DashboardScreenState();
+  State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
-  final List<Widget> _pages = [
-    const _DashboardHomePage(),
-    const GroupsScreen(),
-    const SettlementsScreen(),
-    const ProfileScreen(),
+  late final AnimationController _fabAnimationController;
+  
+  final List<Widget> _pages = const [
+    _DashboardHomePage(),
+    GroupsScreen(),
+    SettlementsScreen(),
+    ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _fabAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+  }
+
+  @override
+  void dispose() {
+    _fabAnimationController.dispose();
+    super.dispose();
+  }
+
+  void _onTabChanged(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+    if (index == 0) {
+      _fabAnimationController.forward();
+    } else {
+      _fabAnimationController.reverse();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: _onTabChanged,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard),
             label: 'Dashboard',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Groups'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.swap_horiz),
+          NavigationDestination(
+            icon: Icon(Icons.group_outlined),
+            selectedIcon: Icon(Icons.group),
+            label: 'Groups',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.swap_horiz_outlined),
+            selectedIcon: Icon(Icons.swap_horiz),
             label: 'Settlements',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const AddExpenseScreen()));
-        },
-        child: const Icon(Icons.add),
+      floatingActionButton: ScaleTransition(
+        scale: _fabAnimationController,
+        child: FloatingActionButton(
+          onPressed: () => _navigateToAddExpense(context),
+          child: const Icon(Icons.add),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+    );
+  }
+
+  void _navigateToAddExpense(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const AddExpenseScreen(),
+        fullscreenDialog: true,
+      ),
     );
   }
 }
@@ -70,14 +115,14 @@ class _DashboardHomePage extends StatefulWidget {
   const _DashboardHomePage({Key? key}) : super(key: key);
 
   @override
-  __DashboardHomePageState createState() => __DashboardHomePageState();
+  State<_DashboardHomePage> createState() => _DashboardHomePageState();
 }
 
-class __DashboardHomePageState extends State<_DashboardHomePage> {
-  // Monthly budget - TODO: Make this configurable in settings
-  static const double monthlyBudget = 50000.0; // NPR 50,000 default budget
+class _DashboardHomePageState extends State<_DashboardHomePage> {
+  static const double _monthlyBudget = 50000.0; // NPR 50,000 default budget
   bool _isLoading = true;
   String? _error;
+  final _refreshKey = GlobalKey<RefreshIndicatorState>();
 
   @override
   void initState() {
@@ -98,25 +143,21 @@ class __DashboardHomePageState extends State<_DashboardHomePage> {
       final userId = authProvider.userId;
 
       if (userId == null) {
-        setState(() {
-          _error = 'User not authenticated';
-          _isLoading = false;
-        });
-        return;
+        throw Exception('User not authenticated');
       }
 
       await Future.wait([
         Provider.of<ExpenseProvider>(context, listen: false)
             .fetchUserExpenses(userId),
         Provider.of<GroupProvider>(context, listen: false)
-            .fetchUserGroups(userId),
-        Provider.of<GroupProvider>(context, listen: false)
-            .fetchSettlements(userId),
+            .fetchUserGroups(),
+        Provider.of<SettlementProvider>(context, listen: false)
+            .fetchUserSettlements(),
       ]);
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Failed to load data. Please try again.';
+        _error = e.toString();
       });
     } finally {
       if (mounted) {
@@ -125,10 +166,6 @@ class __DashboardHomePageState extends State<_DashboardHomePage> {
         });
       }
     }
-  }
-
-  Future<void> _refreshData() async {
-    await _loadData();
   }
 
   @override
@@ -143,62 +180,20 @@ class __DashboardHomePageState extends State<_DashboardHomePage> {
 
     return Scaffold(
       body: RefreshIndicator(
-        onRefresh: _refreshData,
+        key: _refreshKey,
+        onRefresh: _loadData,
         child: SafeArea(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const _LoadingView()
               : _error != null
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.error_outline,
-                            size: 64,
-                            color: Colors.red,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            _error!,
-                            style: Theme.of(context).textTheme.titleMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: _refreshData,
-                            child: const Text('Try Again'),
-                          ),
-                        ],
-                      ),
+                  ? _ErrorView(
+                      error: _error!,
+                      onRetry: _loadData,
                     )
                   : CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       slivers: [
-                        SliverAppBar(
-                          floating: true,
-                          pinned: false,
-                          snap: true,
-                          title: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Hello, ${fullName.split(' ').first}!',
-                                style: Theme.of(context).textTheme.titleLarge,
-                              ),
-                              Text(
-                                'Welcome back to your finance tracker',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ],
-                          ),
-                          actions: [
-                            IconButton(
-                              icon: const Icon(Icons.notifications_outlined),
-                              onPressed: () {
-                                // Navigate to notifications screen
-                              },
-                            ),
-                          ],
-                        ),
+                        _buildAppBar(fullName),
                         SliverPadding(
                           padding: const EdgeInsets.all(16.0),
                           sliver: SliverToBoxAdapter(
@@ -207,77 +202,183 @@ class __DashboardHomePageState extends State<_DashboardHomePage> {
                               children: [
                                 BalanceCard(
                                   spent: currentMonthTotal,
-                                  budget: monthlyBudget,
+                                  budget: _monthlyBudget,
                                   monthlyRecurring: monthlyRecurring,
                                 ),
                                 const SizedBox(height: 24),
-                                Text(
-                                  'Expense Trend',
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const SizedBox(height: 16),
-                                ExpenseChart(
-                                  expenseData: expenseProvider.getMonthlyExpenseTotals(),
-                                ),
+                                _buildExpenseTrend(expenseProvider),
                                 const SizedBox(height: 24),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Recent Expenses',
-                                      style: Theme.of(context).textTheme.titleMedium,
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        // TODO: Navigate to all expenses screen
-                                      },
-                                      child: const Text('See All'),
-                                    ),
-                                  ],
-                                ),
+                                _buildRecentExpensesHeader(),
                               ],
                             ),
                           ),
                         ),
-                        expenses.isEmpty
-                            ? SliverFillRemaining(
-                                child: Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.receipt_long_outlined,
-                                        size: 64,
-                                        color: Colors.grey,
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        'No expenses yet',
-                                        style: Theme.of(context).textTheme.titleMedium,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Add your first expense by tapping the + button',
-                                        style: Theme.of(context).textTheme.bodySmall,
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              )
-                            : SliverList(
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, index) {
-                                    if (index >= expenses.length) return null;
-                                    return RecentExpenseItem(expense: expenses[index]);
-                                  },
-                                  childCount: expenses.length > 5 ? 5 : expenses.length,
-                                ),
-                              ),
+                        _buildExpensesList(expenses),
                         const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
                       ],
                     ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildAppBar(String fullName) {
+    return SliverAppBar(
+      floating: true,
+      pinned: false,
+      snap: true,
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Hello, ${fullName.split(' ').first}!',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          Text(
+            'Welcome back to your finance tracker',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.notifications_outlined),
+          onPressed: () {
+            // TODO: Implement notifications
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExpenseTrend(ExpenseProvider expenseProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Expense Trend',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 16),
+        ExpenseChart(
+          expenseData: expenseProvider.getMonthlyExpenseTotals(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecentExpensesHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'Recent Expenses',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        TextButton(
+          onPressed: () {
+            // TODO: Navigate to all expenses screen
+          },
+          child: const Text('See All'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExpensesList(List<Expense> expenses) {
+    if (expenses.isEmpty) {
+      return const SliverFillRemaining(
+        child: _EmptyExpensesView(),
+      );
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          if (index >= expenses.length) return null;
+          return RecentExpenseItem(expense: expenses[index]);
+        },
+        childCount: expenses.length > 5 ? 5 : expenses.length,
+      ),
+    );
+  }
+}
+
+class _LoadingView extends StatelessWidget {
+  const _LoadingView({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: CircularProgressIndicator(),
+    );
+  }
+}
+
+class _ErrorView extends StatelessWidget {
+  final String error;
+  final VoidCallback onRetry;
+
+  const _ErrorView({
+    Key? key,
+    required this.error,
+    required this.onRetry,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.error_outline,
+            size: 64,
+            color: Colors.red,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            error,
+            style: Theme.of(context).textTheme.titleMedium,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: onRetry,
+            child: const Text('Try Again'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyExpensesView extends StatelessWidget {
+  const _EmptyExpensesView({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.receipt_long_outlined,
+            size: 64,
+            color: Colors.grey,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No expenses yet',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Add your first expense by tapping the + button',
+            style: Theme.of(context).textTheme.bodySmall,
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

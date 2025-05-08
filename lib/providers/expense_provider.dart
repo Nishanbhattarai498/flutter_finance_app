@@ -1,245 +1,174 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_finance_app/services/supabase_service.dart';
 import 'package:flutter_finance_app/models/expense.dart';
+import 'package:flutter_finance_app/services/supabase_service.dart';
+import 'package:flutter_finance_app/utils/cache_manager.dart';
+import 'package:intl/intl.dart';
 
-class ExpenseProvider extends ChangeNotifier {
+class ExpenseProvider with ChangeNotifier {
+  final SupabaseService _supabaseService;
   List<Expense> _expenses = [];
   bool _isLoading = false;
-  bool _hasError = false;
-  String _errorMessage = '';
+  String? _error;
+
+  ExpenseProvider(this._supabaseService);
 
   List<Expense> get expenses => _expenses;
   bool get isLoading => _isLoading;
-  bool get hasError => _hasError;
-  String get errorMessage => _errorMessage;
+  String? get error => _error;
+  String get errorMessage => _error ?? 'An error occurred';
 
   Future<void> fetchUserExpenses(String userId) async {
-    _isLoading = true;
-    _hasError = false;
-    _errorMessage = '';
-    notifyListeners();
-
     try {
-      final expensesData = await SupabaseService.getUserExpenses(userId);
-      _expenses = expensesData.map((e) => Expense.fromJson(e)).toList();
-    } catch (e) {
-      _hasError = true;
-      _errorMessage = 'Failed to load expenses: ${e.toString()}';
-      debugPrint(_errorMessage);
-    }
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
 
-    _isLoading = false;
-    notifyListeners();
+      // Try to get cached data first
+      final cachedExpenses = await CacheManager.getCachedExpenses();
+      if (cachedExpenses != null) {
+        _expenses = cachedExpenses.map((e) => Expense.fromJson(e)).toList();
+        notifyListeners();
+      }
+
+      // Check if we need to sync
+      if (await CacheManager.shouldSync()) {
+        final response = await _supabaseService.getUserExpenses();
+        _expenses = response.map((e) => Expense.fromJson(e)).toList();
+        await CacheManager.cacheExpenses(response);
+      }
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<bool> addExpense(Map<String, dynamic> expenseData) async {
-    _isLoading = true;
-    _hasError = false;
-    _errorMessage = '';
-    notifyListeners();
-
     try {
-      await SupabaseService.addExpense(expenseData);
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
 
-      // Refresh expenses after adding a new one
-      if (SupabaseService.currentUser != null) {
-        await fetchUserExpenses(SupabaseService.currentUser!.id);
+      final response = await _supabaseService.createExpense(expenseData);
+      final newExpense = Expense.fromJson(response);
+      _expenses.insert(0, newExpense);
+
+      // Update cache
+      final cachedExpenses = await CacheManager.getCachedExpenses() ?? [];
+      cachedExpenses.insert(0, response);
+      await CacheManager.cacheExpenses(cachedExpenses);
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateExpense(String expenseId, Map<String, dynamic> data) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final response = await _supabaseService.updateExpense(expenseId, data);
+      final updatedExpense = Expense.fromJson(response);
+      final index = _expenses.indexWhere((e) => e.id == expenseId);
+      if (index != -1) {
+        _expenses[index] = updatedExpense;
       }
 
-      return true;
-    } catch (e) {
-      _hasError = true;
-      _errorMessage = 'Failed to add expense: ${e.toString()}';
-      debugPrint(_errorMessage);
-
-      _isLoading = false;
-      notifyListeners();
-
-      return false;
-    }
-  }
-
-  Future<bool> updateExpense(int id, Map<String, dynamic> expenseData) async {
-    _isLoading = true;
-    _hasError = false;
-    _errorMessage = '';
-    notifyListeners();
-
-    try {
-      await SupabaseService.updateExpense(id, expenseData);
-
-      // Refresh expenses after updating
-      if (SupabaseService.currentUser != null) {
-        await fetchUserExpenses(SupabaseService.currentUser!.id);
+      // Update cache
+      final cachedExpenses = await CacheManager.getCachedExpenses() ?? [];
+      final cacheIndex = cachedExpenses.indexWhere((e) => e['id'] == expenseId);
+      if (cacheIndex != -1) {
+        cachedExpenses[cacheIndex] = response;
+        await CacheManager.cacheExpenses(cachedExpenses);
       }
 
-      return true;
-    } catch (e) {
-      _hasError = true;
-      _errorMessage = 'Failed to update expense: ${e.toString()}';
-      debugPrint(_errorMessage);
-
       _isLoading = false;
       notifyListeners();
-
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
       return false;
     }
   }
 
-  Future<bool> deleteExpense(int id) async {
-    _isLoading = true;
-    _hasError = false;
-    _errorMessage = '';
-    notifyListeners();
-
+  Future<bool> deleteExpense(String expenseId) async {
     try {
-      await SupabaseService.deleteExpense(id);
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
 
-      // Remove the expense from the local list
-      _expenses.removeWhere((expense) => expense.id == id);
+      await _supabaseService.deleteExpense(expenseId);
+      _expenses.removeWhere((e) => e.id == expenseId);
+
+      // Update cache
+      final cachedExpenses = await CacheManager.getCachedExpenses() ?? [];
+      cachedExpenses.removeWhere((e) => e['id'] == expenseId);
+      await CacheManager.cacheExpenses(cachedExpenses);
 
       _isLoading = false;
       notifyListeners();
-
       return true;
     } catch (e) {
-      _hasError = true;
-      _errorMessage = 'Failed to delete expense: ${e.toString()}';
-      debugPrint(_errorMessage);
-
+      _error = e.toString();
       _isLoading = false;
       notifyListeners();
-
       return false;
     }
   }
 
-  // Get remaining balance (considering monthly expenses)
-  double getRemainingBalance(double totalBudget) {
-    final now = DateTime.now();
-    final currentMonth = DateTime(now.year, now.month);
-    final nextMonth = DateTime(now.year, now.month + 1);
-
-    // Calculate one-time expenses for current month
-    double oneTimeExpenses = _expenses
-        .where((expense) {
-          final expenseDate = expense.createdAt;
-          return !expense.isMonthly &&
-              expenseDate.isAfter(currentMonth) &&
-              expenseDate.isBefore(nextMonth);
-        })
-        .fold(0, (sum, expense) => sum + expense.amount);
-
-    // Calculate total monthly recurring expenses
-    double monthlyExpenses = _expenses
-        .where((expense) => expense.isMonthly)
-        .fold(0, (sum, expense) => sum + expense.amount);
-
-    return totalBudget - (oneTimeExpenses + monthlyExpenses);
-  }
-
-  // Get total expenses including monthly recurring ones
   double getCurrentMonthTotal() {
     final now = DateTime.now();
-    final currentMonth = DateTime(now.year, now.month);
-    final nextMonth = DateTime(now.year, now.month + 1);
+    final firstDayOfMonth = DateTime(now.year, now.month, 1);
+    final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
 
-    // Calculate one-time expenses
-    double oneTimeExpenses = _expenses
+    return _expenses
         .where((expense) {
-          final expenseDate = expense.createdAt;
+          final expenseDate = expense.date;
           return !expense.isMonthly &&
-              expenseDate.isAfter(currentMonth) &&
-              expenseDate.isBefore(nextMonth);
+              expenseDate.isAfter(firstDayOfMonth) &&
+              expenseDate.isBefore(lastDayOfMonth.add(const Duration(days: 1)));
         })
         .fold(0, (sum, expense) => sum + expense.amount);
-
-    // Add monthly recurring expenses
-    double monthlyExpenses = _expenses
-        .where((expense) => expense.isMonthly)
-        .fold(0, (sum, expense) => sum + expense.amount);
-
-    return oneTimeExpenses + monthlyExpenses;
   }
 
-  // Get monthly expenses totals for chart
-  Map<String, double> getMonthlyExpenseTotals({int monthsCount = 6}) {
-    final Map<String, double> monthlyTotals = {};
-    final now = DateTime.now();
-
-    for (int i = 0; i < monthsCount; i++) {
-      final month = DateTime(now.year, now.month - i);
-      final monthName = _getMonthName(month.month);
-
-      final startOfMonth = DateTime(month.year, month.month, 1);
-      final endOfMonth = (month.month < 12)
-          ? DateTime(month.year, month.month + 1, 0)
-          : DateTime(month.year + 1, 1, 0);
-
-      // Calculate one-time expenses for the month
-      final oneTimeTotal = _expenses
-          .where((expense) {
-            final date = expense.createdAt;
-            return !expense.isMonthly &&
-                date.isAfter(startOfMonth) &&
-                date.isBefore(endOfMonth.add(const Duration(days: 1)));
-          })
-          .fold(0.0, (sum, expense) => sum + expense.amount);
-
-      // Add monthly recurring expenses
-      final monthlyTotal = _expenses
-          .where((expense) => expense.isMonthly)
-          .fold(0.0, (sum, expense) => sum + expense.amount);
-
-      monthlyTotals[monthName] = oneTimeTotal + monthlyTotal;
-    }
-
-    return monthlyTotals;
-  }
-
-  // Format amount in NPR
-  String formatAmountNPR(double amount) {
-    return 'NPR ${amount.toStringAsFixed(2)}';
-  }
-
-  // Get total monthly recurring expenses
   double getTotalMonthlyRecurring() {
     return _expenses
         .where((expense) => expense.isMonthly)
         .fold(0, (sum, expense) => sum + expense.amount);
   }
 
-  // Get expense categories distribution
-  Map<String, double> getCategoryDistribution() {
-    final Map<String, double> categories = {};
+  List<Map<String, dynamic>> getMonthlyExpenseTotals() {
+    final now = DateTime.now();
+    final months = List.generate(6, (index) {
+      final date = DateTime(now.year, now.month - index, 1);
+      return {
+        'date': date,
+        'amount': _expenses
+            .where((expense) {
+              final expenseDate = expense.date;
+              return !expense.isMonthly &&
+                  expenseDate.year == date.year &&
+                  expenseDate.month == date.month;
+            })
+            .fold(0.0, (sum, expense) => sum + expense.amount),
+      };
+    }).reversed.toList();
 
-    for (var expense in _expenses) {
-      if (categories.containsKey(expense.category)) {
-        categories[expense.category] =
-            categories[expense.category]! + expense.amount;
-      } else {
-        categories[expense.category] = expense.amount;
-      }
-    }
-
-    return categories;
+    return months;
   }
 
-  String _getMonthName(int month) {
-    const monthNames = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return monthNames[month - 1];
+  String formatAmountNPR(double amount) {
+    return NumberFormat.currency(symbol: 'NPR ').format(amount);
   }
 }

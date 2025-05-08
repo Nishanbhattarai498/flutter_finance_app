@@ -1,251 +1,267 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_finance_app/services/supabase_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_finance_app/models/group.dart';
-import 'package:flutter_finance_app/models/settlement.dart';
+import 'package:flutter_finance_app/services/supabase_service.dart';
+import 'package:flutter_finance_app/utils/cache_manager.dart';
 
-class GroupProvider extends ChangeNotifier {
+class GroupProvider with ChangeNotifier {
+  final SupabaseService _supabaseService;
+  final CacheManager _cacheManager;
   List<Group> _groups = [];
-  List<Settlement> _settlements = [];
   bool _isLoading = false;
-  bool _hasError = false;
-  String _errorMessage = '';
+  String? _error;
+
+  GroupProvider(this._supabaseService, this._cacheManager);
 
   List<Group> get groups => _groups;
-  List<Settlement> get settlements => _settlements;
   bool get isLoading => _isLoading;
-  bool get hasError => _hasError;
-  String get errorMessage => _errorMessage;
+  String? get error => _error;
+  String get errorMessage => _error ?? 'An error occurred';
 
-  Future<void> fetchUserGroups(String userId) async {
-    _isLoading = true;
-    _hasError = false;
-    _errorMessage = '';
-    notifyListeners();
-
+  Future<void> fetchUserGroups() async {
     try {
-      final groupsData = await SupabaseService.getUserGroups(userId);
-      _groups = groupsData.map((g) => Group.fromJson(g)).toList();
-    } catch (e) {
-      _hasError = true;
-      _errorMessage = 'Failed to load groups: ${e.toString()}';
-      debugPrint(_errorMessage);
-    }
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
 
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  Future<void> fetchSettlements(String userId) async {
-    _isLoading = true;
-    _hasError = false;
-    _errorMessage = '';
-    notifyListeners();
-
-    try {
-      final settlementsData = await SupabaseService.getSettlements(userId);
-      _settlements = settlementsData
-          .map((s) => Settlement.fromJson(s))
-          .toList();
-    } catch (e) {
-      _hasError = true;
-      _errorMessage = 'Failed to load settlements: ${e.toString()}';
-      debugPrint(_errorMessage);
-    }
-
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  Future<Map<String, dynamic>> createGroup(
-    Map<String, dynamic> groupData,
-    List<String> memberIds,
-  ) async {
-    _isLoading = true;
-    _hasError = false;
-    _errorMessage = '';
-    notifyListeners();
-
-    try {
-      // Create the group
-      final groupId = await SupabaseService.createGroup(groupData);
-
-      // Add creator as a member
-      await SupabaseService.addMemberToGroup({
-        'group_id': groupId,
-        'user_id': groupData['created_by'],
-        'role': 'admin',
-      });
-
-      // Add other members
-      for (var memberId in memberIds) {
-        await SupabaseService.addMemberToGroup({
-          'group_id': groupId,
-          'user_id': memberId,
-          'role': 'member',
-        });
+      // Try to get cached data first
+      final cachedGroups = await _cacheManager.getCachedGroups();
+      if (cachedGroups != null) {
+        _groups = cachedGroups.map((g) => Group.fromJson(g)).toList();
+        notifyListeners();
       }
 
-      // Refresh groups after creating a new one
-      await fetchUserGroups(groupData['created_by']);
-
-      return {'success': true, 'group_id': groupId};
+      // Check if we need to sync
+      if (await _cacheManager.shouldSync()) {
+        final response = await _supabaseService.getUserGroups();
+        _groups = response.map((g) => Group.fromJson(g)).toList();
+        await _cacheManager.cacheGroups(response);
+      }
     } catch (e) {
-      _hasError = true;
-      _errorMessage = 'Failed to create group: ${e.toString()}';
-      debugPrint(_errorMessage);
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> createGroup(String name, String? description) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final response = await _supabaseService.createGroup(name, description);
+      final newGroup = Group.fromJson(response);
+      _groups.add(newGroup);
+
+      // Update cache
+      final cachedGroups = await _cacheManager.getCachedGroups() ?? [];
+      cachedGroups.add(response);
+      await _cacheManager.cacheGroups(cachedGroups);
 
       _isLoading = false;
       notifyListeners();
-
-      return {'success': false, 'message': _errorMessage};
-    }
-  }
-
-  Future<bool> addSettlement(Map<String, dynamic> settlementData) async {
-    _isLoading = true;
-    _hasError = false;
-    _errorMessage = '';
-    notifyListeners();
-
-    try {
-      await SupabaseService.addSettlement(settlementData);
-
-      // Refresh settlements after adding a new one
-      if (SupabaseService.currentUser != null) {
-        await fetchSettlements(SupabaseService.currentUser!.id);
-      }
-
       return true;
     } catch (e) {
-      _hasError = true;
-      _errorMessage = 'Failed to add settlement: ${e.toString()}';
-      debugPrint(_errorMessage);
-
+      _error = e.toString();
       _isLoading = false;
       notifyListeners();
-
       return false;
     }
   }
 
-  // Calculate balances between users in a group
-  Map<String, Map<String, double>> calculateGroupBalances(int groupId) {
-    final Map<String, Map<String, double>> balances = {};
+  Future<bool> updateGroup(String groupId, String name, String? description) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final response = await _supabaseService.updateGroup(groupId, name, description);
+      final updatedGroup = Group.fromJson(response);
+      _groups = _groups.map((g) => g.id == groupId ? updatedGroup : g).toList();
+
+      // Update cache
+      final cachedGroups = await _cacheManager.getCachedGroups() ?? [];
+      final cacheIndex = cachedGroups.indexWhere((g) => g['id'] == groupId);
+      if (cacheIndex != -1) {
+        cachedGroups[cacheIndex] = response;
+        await _cacheManager.cacheGroups(cachedGroups);
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteGroup(String groupId) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      await _supabaseService.deleteGroup(groupId);
+      _groups.removeWhere((g) => g.id == groupId);
+
+      // Update cache
+      final cachedGroups = await _cacheManager.getCachedGroups() ?? [];
+      cachedGroups.removeWhere((g) => g['id'] == groupId);
+      await _cacheManager.cacheGroups(cachedGroups);
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> addGroupMember(String groupId, String userId, String role) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final response = await _supabaseService.addGroupMember(groupId, userId, role);
+      final updatedGroup = Group.fromJson(response);
+      _groups = _groups.map((g) => g.id == groupId ? updatedGroup : g).toList();
+
+      // Update cache
+      final cachedGroups = await _cacheManager.getCachedGroups() ?? [];
+      final cacheIndex = cachedGroups.indexWhere((g) => g['id'] == groupId);
+      if (cacheIndex != -1) {
+        cachedGroups[cacheIndex] = response;
+        await _cacheManager.cacheGroups(cachedGroups);
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> removeGroupMember(String groupId, String userId) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final response = await _supabaseService.removeGroupMember(groupId, userId);
+      final updatedGroup = Group.fromJson(response);
+      _groups = _groups.map((g) => g.id == groupId ? updatedGroup : g).toList();
+
+      // Update cache
+      final cachedGroups = await _cacheManager.getCachedGroups() ?? [];
+      final cacheIndex = cachedGroups.indexWhere((g) => g['id'] == groupId);
+      if (cacheIndex != -1) {
+        cachedGroups[cacheIndex] = response;
+        await _cacheManager.cacheGroups(cachedGroups);
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Map<String, Map<String, double>> calculateGroupBalances(String groupId) {
     final group = _groups.firstWhere((g) => g.id == groupId);
+    final balances = <String, Map<String, double>>{};
 
     // Initialize balances for all members
-    for (var member in group.members) {
-      balances[member.userId] = {};
+    for (final member in group.members) {
+      balances[member.userId] = {
+        'paid': 0.0,
+        'owed': 0.0,
+        'balance': 0.0,
+      };
+    }
 
-      for (var otherMember in group.members) {
-        if (member.userId != otherMember.userId) {
-          balances[member.userId]![otherMember.userId] = 0;
+    // Calculate balances
+    for (final expense in group.expenses) {
+      final paidBy = expense.userId;
+      final amount = expense.amount;
+      final perPerson = amount / expense.participants.length;
+
+      // Update paid amount
+      balances[paidBy]!['paid'] = (balances[paidBy]!['paid'] ?? 0) + amount;
+
+      // Update owed amount for each participant
+      for (final participantId in expense.participants) {
+        if (participantId != paidBy) {
+          balances[participantId]!['owed'] = (balances[participantId]!['owed'] ?? 0) + perPerson;
         }
       }
     }
 
-    // Calculate balances based on expenses
-    for (var expense in group.expenses) {
-      final payerId = expense.userId;
-      final amount = expense.amount;
-      final participants = expense.participants;
-
-      if (participants.isEmpty) continue;
-
-      final splitAmount = amount / participants.length;
-
-      for (var participantId in participants) {
-        if (participantId == payerId) continue;
-
-        balances[payerId]![participantId] =
-            (balances[payerId]![participantId] ?? 0) + splitAmount;
-        balances[participantId]![payerId] =
-            (balances[participantId]![payerId] ?? 0) - splitAmount;
-      }
+    // Calculate final balance for each member
+    for (final memberId in balances.keys) {
+      final paid = balances[memberId]!['paid'] ?? 0;
+      final owed = balances[memberId]!['owed'] ?? 0;
+      balances[memberId]!['balance'] = paid - owed;
     }
 
     return balances;
   }
 
-  // Get simplified debts (optimized settlement plan)
-  List<Map<String, dynamic>> getSimplifiedDebts(int groupId) {
+  List<Map<String, dynamic>> getSimplifiedDebts(String groupId) {
     final balances = calculateGroupBalances(groupId);
-    final List<Map<String, dynamic>> settlements = [];
+    final debtors = <String, double>{};
+    final creditors = <String, double>{};
 
-    // Convert balances to a list of credits/debits
-    final List<Map<String, dynamic>> debts = [];
-
-    balances.forEach((userId, userBalances) {
-      userBalances.forEach((otherUserId, amount) {
-        if (amount > 0) {
-          debts.add({'from': otherUserId, 'to': userId, 'amount': amount});
-        }
-      });
+    // Separate debtors and creditors
+    balances.forEach((memberId, balance) {
+      final amount = balance['balance'] ?? 0;
+      if (amount < 0) {
+        debtors[memberId] = -amount;
+      } else if (amount > 0) {
+        creditors[memberId] = amount;
+      }
     });
 
-    // Sort debts by amount (descending)
-    debts.sort(
-      (a, b) => (b['amount'] as double).compareTo(a['amount'] as double),
-    );
+    final settlements = <Map<String, dynamic>>[];
 
-    // Simplify debts
-    while (debts.isNotEmpty) {
-      final highestDebt = debts.removeAt(0);
+    // Calculate simplified debts
+    while (debtors.isNotEmpty && creditors.isNotEmpty) {
+      final debtor = debtors.entries.first;
+      final creditor = creditors.entries.first;
 
-      // Find if there's a reverse debt
-      final reverseDebtIndex = debts.indexWhere(
-        (debt) =>
-            debt['from'] == highestDebt['to'] &&
-            debt['to'] == highestDebt['from'],
-      );
+      final amount = debtor.value < creditor.value ? debtor.value : creditor.value;
 
-      if (reverseDebtIndex != -1) {
-        final reverseDebt = debts[reverseDebtIndex];
+      settlements.add({
+        'from': debtor.key,
+        'to': creditor.key,
+        'amount': amount,
+      });
 
-        if (reverseDebt['amount'] > highestDebt['amount']) {
-          // Reduce reverse debt by highest debt amount
-          reverseDebt['amount'] -= highestDebt['amount'];
-
-          // Add settlement
-          settlements.add({
-            'payer': highestDebt['from'],
-            'receiver': highestDebt['to'],
-            'amount': highestDebt['amount'],
-          });
-        } else {
-          // Remove reverse debt
-          debts.removeAt(reverseDebtIndex);
-
-          // Add settlement for reverse debt amount
-          settlements.add({
-            'payer': highestDebt['from'],
-            'receiver': highestDebt['to'],
-            'amount': reverseDebt['amount'],
-          });
-
-          // If there's remaining debt, add it back to the list
-          final remainingAmount = highestDebt['amount'] - reverseDebt['amount'];
-          if (remainingAmount > 0.01) {
-            debts.add({
-              'from': highestDebt['from'],
-              'to': highestDebt['to'],
-              'amount': remainingAmount,
-            });
-
-            // Re-sort debts
-            debts.sort(
-              (a, b) =>
-                  (b['amount'] as double).compareTo(a['amount'] as double),
-            );
-          }
-        }
+      if (debtor.value == amount) {
+        debtors.remove(debtor.key);
       } else {
-        // No reverse debt, just add the settlement
-        settlements.add({
-          'payer': highestDebt['from'],
-          'receiver': highestDebt['to'],
-          'amount': highestDebt['amount'],
-        });
+        debtors[debtor.key] = debtor.value - amount;
+      }
+
+      if (creditor.value == amount) {
+        creditors.remove(creditor.key);
+      } else {
+        creditors[creditor.key] = creditor.value - amount;
       }
     }
 
