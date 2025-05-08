@@ -14,6 +14,7 @@ import 'package:flutter_finance_app/widgets/loading_screen.dart';
 import 'package:flutter_finance_app/widgets/error_screen.dart';
 import 'package:flutter_finance_app/utils/connectivity_manager.dart';
 import 'package:flutter_finance_app/secrets.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,15 +25,17 @@ void main() async {
     supabaseAnonKey: Secrets.supabaseAnonKey,
   );
 
+  // Initialize SharedPreferences
+  final prefs = await SharedPreferences.getInstance();
   final supabaseService = SupabaseService();
-  final cacheManager = CacheManager();
+  final cacheManager = CacheManager(prefs);
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(
-          create: (_) => ExpenseProvider(supabaseService),
+          create: (_) => ExpenseProvider(supabaseService, cacheManager),
         ),
         ChangeNotifierProvider(
           create: (_) => GroupProvider(supabaseService, cacheManager),

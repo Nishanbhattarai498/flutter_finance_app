@@ -4,71 +4,74 @@ import 'package:shared_preferences/shared_preferences.dart';
 class CacheManager {
   static const String _expensesKey = 'cached_expenses';
   static const String _groupsKey = 'cached_groups';
-  static const String _lastSyncKey = 'last_sync_timestamp';
+  static const String _settlementsKey = 'cached_settlements';
+  static const String _lastSyncKey = 'last_sync';
   static const Duration _syncInterval = Duration(minutes: 5);
 
-  static Future<void> cacheData(String key, dynamic data) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(key, jsonEncode(data));
+  final SharedPreferences _prefs;
+
+  CacheManager(this._prefs);
+
+  Future<void> cacheData(String key, dynamic data) async {
+    await _prefs.setString(key, jsonEncode(data));
     await _updateLastSync();
   }
 
-  static Future<dynamic> getCachedData(String key) async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? dataJson = prefs.getString(key);
+  Future<dynamic> getCachedData(String key) async {
+    final String? dataJson = _prefs.getString(key);
     if (dataJson == null) return null;
-
     return jsonDecode(dataJson);
   }
 
-  static Future<void> cacheExpenses(List<Map<String, dynamic>> expenses) async {
+  Future<void> cacheExpenses(List<Map<String, dynamic>> expenses) async {
     await cacheData(_expensesKey, expenses);
   }
 
-  static Future<void> cacheGroups(List<Map<String, dynamic>> groups) async {
+  Future<void> cacheGroups(List<Map<String, dynamic>> groups) async {
     await cacheData(_groupsKey, groups);
   }
 
-  static Future<List<Map<String, dynamic>>?> getCachedExpenses() async {
+  Future<List<Map<String, dynamic>>?> getCachedExpenses() async {
     final data = await getCachedData(_expensesKey);
     if (data == null) return null;
-
-    final List<dynamic> decoded = data;
-    return decoded.cast<Map<String, dynamic>>();
+    return List<Map<String, dynamic>>.from(data);
   }
 
-  static Future<List<Map<String, dynamic>>?> getCachedGroups() async {
+  Future<List<Map<String, dynamic>>?> getCachedGroups() async {
     final data = await getCachedData(_groupsKey);
     if (data == null) return null;
-
-    final List<dynamic> decoded = data;
-    return decoded.cast<Map<String, dynamic>>();
+    return List<Map<String, dynamic>>.from(data);
   }
 
-  static Future<DateTime?> getLastSyncTime() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? timestamp = prefs.getString(_lastSyncKey);
-    if (timestamp == null) return null;
-    return DateTime.parse(timestamp);
+  Future<void> cacheSettlements(List<Map<String, dynamic>> settlements) async {
+    await cacheData(_settlementsKey, settlements);
   }
 
-  static Future<bool> shouldSync() async {
-    final lastSync = await getLastSyncTime();
-    if (lastSync == null) return true;
-
-    final now = DateTime.now();
-    return now.difference(lastSync) > _syncInterval;
+  Future<List<Map<String, dynamic>>?> getCachedSettlements() async {
+    final data = await getCachedData(_settlementsKey);
+    if (data == null) return null;
+    return List<Map<String, dynamic>>.from(data);
   }
 
-  static Future<void> _updateLastSync() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_lastSyncKey, DateTime.now().toIso8601String());
+  Future<DateTime?> getLastSyncTime() async {
+    final lastSync = _prefs.getInt(_lastSyncKey) ?? 0;
+    return DateTime.fromMillisecondsSinceEpoch(lastSync);
   }
 
-  static Future<void> clearCache() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_expensesKey);
-    await prefs.remove(_groupsKey);
-    await prefs.remove(_lastSyncKey);
+  Future<bool> shouldSync() async {
+    final lastSync = _prefs.getInt(_lastSyncKey) ?? 0;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return now - lastSync > _syncInterval.inMilliseconds;
+  }
+
+  Future<void> _updateLastSync() async {
+    await _prefs.setInt(_lastSyncKey, DateTime.now().millisecondsSinceEpoch);
+  }
+
+  Future<void> clearCache() async {
+    await _prefs.remove(_expensesKey);
+    await _prefs.remove(_groupsKey);
+    await _prefs.remove(_settlementsKey);
+    await _prefs.remove(_lastSyncKey);
   }
 } 

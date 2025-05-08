@@ -6,11 +6,12 @@ import 'package:intl/intl.dart';
 
 class ExpenseProvider with ChangeNotifier {
   final SupabaseService _supabaseService;
+  final CacheManager _cacheManager;
   List<Expense> _expenses = [];
   bool _isLoading = false;
   String? _error;
 
-  ExpenseProvider(this._supabaseService);
+  ExpenseProvider(this._supabaseService, this._cacheManager);
 
   List<Expense> get expenses => _expenses;
   bool get isLoading => _isLoading;
@@ -24,17 +25,17 @@ class ExpenseProvider with ChangeNotifier {
       notifyListeners();
 
       // Try to get cached data first
-      final cachedExpenses = await CacheManager.getCachedExpenses();
+      final cachedExpenses = await _cacheManager.getCachedExpenses();
       if (cachedExpenses != null) {
         _expenses = cachedExpenses.map((e) => Expense.fromJson(e)).toList();
         notifyListeners();
       }
 
       // Check if we need to sync
-      if (await CacheManager.shouldSync()) {
+      if (await _cacheManager.shouldSync()) {
         final response = await _supabaseService.getUserExpenses();
         _expenses = response.map((e) => Expense.fromJson(e)).toList();
-        await CacheManager.cacheExpenses(response);
+        await _cacheManager.cacheExpenses(response);
       }
     } catch (e) {
       _error = e.toString();
@@ -55,9 +56,9 @@ class ExpenseProvider with ChangeNotifier {
       _expenses.insert(0, newExpense);
 
       // Update cache
-      final cachedExpenses = await CacheManager.getCachedExpenses() ?? [];
+      final cachedExpenses = await _cacheManager.getCachedExpenses() ?? [];
       cachedExpenses.insert(0, response);
-      await CacheManager.cacheExpenses(cachedExpenses);
+      await _cacheManager.cacheExpenses(cachedExpenses);
 
       _isLoading = false;
       notifyListeners();
@@ -84,11 +85,11 @@ class ExpenseProvider with ChangeNotifier {
       }
 
       // Update cache
-      final cachedExpenses = await CacheManager.getCachedExpenses() ?? [];
+      final cachedExpenses = await _cacheManager.getCachedExpenses() ?? [];
       final cacheIndex = cachedExpenses.indexWhere((e) => e['id'] == expenseId);
       if (cacheIndex != -1) {
         cachedExpenses[cacheIndex] = response;
-        await CacheManager.cacheExpenses(cachedExpenses);
+        await _cacheManager.cacheExpenses(cachedExpenses);
       }
 
       _isLoading = false;
@@ -112,9 +113,9 @@ class ExpenseProvider with ChangeNotifier {
       _expenses.removeWhere((e) => e.id == expenseId);
 
       // Update cache
-      final cachedExpenses = await CacheManager.getCachedExpenses() ?? [];
+      final cachedExpenses = await _cacheManager.getCachedExpenses() ?? [];
       cachedExpenses.removeWhere((e) => e['id'] == expenseId);
-      await CacheManager.cacheExpenses(cachedExpenses);
+      await _cacheManager.cacheExpenses(cachedExpenses);
 
       _isLoading = false;
       notifyListeners();

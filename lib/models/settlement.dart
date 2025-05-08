@@ -7,8 +7,9 @@ class Settlement {
   final String receiverId;
   final String? groupId;
   final String status;
+  final String? notes;
   final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime? updatedAt;
   final Map<String, dynamic>? payer;
   final Map<String, dynamic>? receiver;
   final Map<String, dynamic>? group;
@@ -20,8 +21,9 @@ class Settlement {
     required this.receiverId,
     this.groupId,
     required this.status,
+    this.notes,
     required this.createdAt,
-    required this.updatedAt,
+    this.updatedAt,
     this.payer,
     this.receiver,
     this.group,
@@ -35,8 +37,9 @@ class Settlement {
       receiverId: json['receiver_id'] as String,
       groupId: json['group_id'] as String?,
       status: json['status'] as String,
+      notes: json['notes'],
       createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at'] as String) : null,
       payer: json['payer'] as Map<String, dynamic>?,
       receiver: json['receiver'] as Map<String, dynamic>?,
       group: json['group'] as Map<String, dynamic>?,
@@ -51,8 +54,9 @@ class Settlement {
       'receiver_id': receiverId,
       'group_id': groupId,
       'status': status,
+      'notes': notes,
       'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
       'payer': payer,
       'receiver': receiver,
       'group': group,
@@ -66,6 +70,7 @@ class Settlement {
     String? receiverId,
     String? groupId,
     String? status,
+    String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
     Map<String, dynamic>? payer,
@@ -79,6 +84,7 @@ class Settlement {
       receiverId: receiverId ?? this.receiverId,
       groupId: groupId ?? this.groupId,
       status: status ?? this.status,
+      notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       payer: payer ?? this.payer,

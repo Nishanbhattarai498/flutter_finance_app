@@ -1,59 +1,53 @@
 import 'package:flutter/foundation.dart';
 
 class GroupMember {
-  final String id;
-  final String groupId;
   final String userId;
+  final String groupId;
   final String role;
+  final String displayName;
   final DateTime createdAt;
-  final Map<String, dynamic>? user;
 
   GroupMember({
-    required this.id,
-    required this.groupId,
     required this.userId,
+    required this.groupId,
     required this.role,
+    required this.displayName,
     required this.createdAt,
-    this.user,
   });
 
   factory GroupMember.fromJson(Map<String, dynamic> json) {
     return GroupMember(
-      id: json['id'] as String,
-      groupId: json['group_id'] as String,
-      userId: json['user_id'] as String,
-      role: json['role'] as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      user: json['user'] as Map<String, dynamic>?,
+      userId: json['user_id'],
+      groupId: json['group_id'],
+      role: json['role'],
+      displayName: json['display_name'] ?? json['user']['full_name'] ?? 'Unknown User',
+      createdAt: DateTime.parse(json['created_at']),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'group_id': groupId,
       'user_id': userId,
+      'group_id': groupId,
       'role': role,
+      'display_name': displayName,
       'created_at': createdAt.toIso8601String(),
-      'user': user,
     };
   }
 
   GroupMember copyWith({
-    String? id,
-    String? groupId,
     String? userId,
+    String? groupId,
     String? role,
+    String? displayName,
     DateTime? createdAt,
-    Map<String, dynamic>? user,
   }) {
     return GroupMember(
-      id: id ?? this.id,
-      groupId: groupId ?? this.groupId,
       userId: userId ?? this.userId,
+      groupId: groupId ?? this.groupId,
       role: role ?? this.role,
+      displayName: displayName ?? this.displayName,
       createdAt: createdAt ?? this.createdAt,
-      user: user ?? this.user,
     );
   }
 
@@ -61,33 +55,24 @@ class GroupMember {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is GroupMember &&
-        other.id == id &&
-        other.groupId == groupId &&
         other.userId == userId &&
+        other.groupId == groupId &&
         other.role == role &&
+        other.displayName == displayName &&
         other.createdAt == createdAt;
   }
 
   @override
   int get hashCode {
-    return id.hashCode ^
+    return userId.hashCode ^
         groupId.hashCode ^
-        userId.hashCode ^
         role.hashCode ^
+        displayName.hashCode ^
         createdAt.hashCode;
   }
 
-  String get displayName {
-    if (user != null && user!['full_name'] != null) {
-      return user!['full_name'];
-    }
-    return 'Unknown User';
-  }
-
   String get avatarUrl {
-    if (user != null && user!['avatar_url'] != null) {
-      return user!['avatar_url'];
-    }
+    // Implementation of avatarUrl getter
     return '';
   }
 }

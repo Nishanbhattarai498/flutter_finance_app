@@ -17,7 +17,7 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      _isAuthenticated = await isAuthenticated();
+      _isAuthenticated = await checkAuthenticationStatus();
       
       _isLoading = false;
       notifyListeners();
@@ -28,7 +28,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> isAuthenticated() async {
+  Future<bool> checkAuthenticationStatus() async {
     try {
       // Check for current user first
       final user = SupabaseService.currentUser;

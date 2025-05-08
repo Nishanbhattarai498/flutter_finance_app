@@ -131,53 +131,26 @@ class SupabaseService {
 
   // Group methods
   Future<List<Map<String, dynamic>>> getUserGroups() async {
-    final userId = currentUser?.id;
-    if (userId == null) throw 'User not authenticated';
-
     final response = await _client
-        .from('group_members')
-        .select('*, groups(*)')
-        .eq('user_id', userId);
+        .from('groups')
+        .select()
+        .order('created_at', ascending: false);
     return List<Map<String, dynamic>>.from(response);
   }
 
-  Future<Map<String, dynamic>> createGroup(
-    String name,
-    String? description,
-  ) async {
-    final userId = currentUser?.id;
-    if (userId == null) throw 'User not authenticated';
-
-    final response = await _client.from('groups').insert({
-      'name': name,
-      'description': description,
-      'created_by': userId,
-      'created_at': DateTime.now().toIso8601String(),
-    }).select().single();
-
-    // Add creator as admin member
-    await _client.from('group_members').insert({
-      'group_id': response['id'],
-      'user_id': userId,
-      'role': 'admin',
-      'created_at': DateTime.now().toIso8601String(),
-    });
-
+  Future<Map<String, dynamic>> createGroup(Map<String, dynamic> data) async {
+    final response = await _client
+        .from('groups')
+        .insert(data)
+        .select()
+        .single();
     return response;
   }
 
-  Future<Map<String, dynamic>> updateGroup(
-    String groupId,
-    String name,
-    String? description,
-  ) async {
+  Future<Map<String, dynamic>> updateGroup(String groupId, Map<String, dynamic> data) async {
     final response = await _client
         .from('groups')
-        .update({
-          'name': name,
-          'description': description,
-          'updated_at': DateTime.now().toIso8601String(),
-        })
+        .update(data)
         .eq('id', groupId)
         .select()
         .single();
@@ -185,7 +158,10 @@ class SupabaseService {
   }
 
   Future<void> deleteGroup(String groupId) async {
-    await _client.from('groups').delete().eq('id', groupId);
+    await _client
+        .from('groups')
+        .delete()
+        .eq('id', groupId);
   }
 
   Future<Map<String, dynamic>> addGroupMember(
@@ -228,13 +204,9 @@ class SupabaseService {
 
   // Expense methods
   Future<List<Map<String, dynamic>>> getUserExpenses() async {
-    final userId = currentUser?.id;
-    if (userId == null) throw 'User not authenticated';
-
     final response = await _client
         .from('expenses')
         .select()
-        .or('user_id.eq.$userId,participants.cs.{${userId}}')
         .order('created_at', ascending: false);
     return List<Map<String, dynamic>>.from(response);
   }
@@ -248,16 +220,10 @@ class SupabaseService {
     return response;
   }
 
-  Future<Map<String, dynamic>> updateExpense(
-    String expenseId,
-    Map<String, dynamic> data,
-  ) async {
+  Future<Map<String, dynamic>> updateExpense(String expenseId, Map<String, dynamic> data) async {
     final response = await _client
         .from('expenses')
-        .update({
-          ...data,
-          'updated_at': DateTime.now().toIso8601String(),
-        })
+        .update(data)
         .eq('id', expenseId)
         .select()
         .single();
@@ -265,49 +231,34 @@ class SupabaseService {
   }
 
   Future<void> deleteExpense(String expenseId) async {
-    await _client.from('expenses').delete().eq('id', expenseId);
+    await _client
+        .from('expenses')
+        .delete()
+        .eq('id', expenseId);
   }
 
   // Settlement methods
   Future<List<Map<String, dynamic>>> getUserSettlements() async {
-    final userId = currentUser?.id;
-    if (userId == null) throw 'User not authenticated';
-
     final response = await _client
         .from('settlements')
         .select()
-        .or('payer_id.eq.$userId,receiver_id.eq.$userId')
         .order('created_at', ascending: false);
     return List<Map<String, dynamic>>.from(response);
   }
 
-  Future<Map<String, dynamic>> createSettlement({
-    required double amount,
-    required String payerId,
-    required String receiverId,
-    String? groupId,
-  }) async {
-    final response = await _client.from('settlements').insert({
-      'amount': amount,
-      'payer_id': payerId,
-      'receiver_id': receiverId,
-      'group_id': groupId,
-      'status': 'pending',
-      'created_at': DateTime.now().toIso8601String(),
-    }).select().single();
+  Future<Map<String, dynamic>> createSettlement(Map<String, dynamic> data) async {
+    final response = await _client
+        .from('settlements')
+        .insert(data)
+        .select()
+        .single();
     return response;
   }
 
-  Future<Map<String, dynamic>> updateSettlementStatus(
-    String settlementId,
-    String status,
-  ) async {
+  Future<Map<String, dynamic>> updateSettlement(String settlementId, Map<String, dynamic> data) async {
     final response = await _client
         .from('settlements')
-        .update({
-          'status': status,
-          'updated_at': DateTime.now().toIso8601String(),
-        })
+        .update(data)
         .eq('id', settlementId)
         .select()
         .single();
@@ -315,6 +266,9 @@ class SupabaseService {
   }
 
   Future<void> deleteSettlement(String settlementId) async {
-    await _client.from('settlements').delete().eq('id', settlementId);
+    await _client
+        .from('settlements')
+        .delete()
+        .eq('id', settlementId);
   }
 }

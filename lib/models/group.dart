@@ -8,8 +8,9 @@ class Group {
   final String? description;
   final String createdBy;
   final DateTime createdAt;
-  final DateTime updatedAt;
-  final List<Map<String, dynamic>> members;
+  final DateTime? updatedAt;
+  final List<GroupMember> members;
+  final List<Expense> expenses;
 
   Group({
     required this.id,
@@ -17,21 +18,25 @@ class Group {
     this.description,
     required this.createdBy,
     required this.createdAt,
-    required this.updatedAt,
-    this.members = const [],
+    this.updatedAt,
+    required this.members,
+    required this.expenses,
   });
 
   factory Group.fromJson(Map<String, dynamic> json) {
     return Group(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      description: json['description'] as String?,
-      createdBy: json['created_by'] as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
-      members: List<Map<String, dynamic>>.from(
-        (json['members'] as List?)?.map((m) => m as Map<String, dynamic>) ?? [],
-      ),
+      id: json['id'],
+      name: json['name'],
+      description: json['description'],
+      createdBy: json['created_by'],
+      createdAt: DateTime.parse(json['created_at']),
+      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+      members: (json['group_members'] as List?)
+          ?.map((m) => GroupMember.fromJson(m))
+          .toList() ?? [],
+      expenses: (json['expenses'] as List?)
+          ?.map((e) => Expense.fromJson(e))
+          .toList() ?? [],
     );
   }
 
@@ -42,8 +47,9 @@ class Group {
       'description': description,
       'created_by': createdBy,
       'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
-      'members': members,
+      'updated_at': updatedAt?.toIso8601String(),
+      'group_members': members.map((m) => m.toJson()).toList(),
+      'expenses': expenses.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -54,7 +60,8 @@ class Group {
     String? createdBy,
     DateTime? createdAt,
     DateTime? updatedAt,
-    List<Map<String, dynamic>>? members,
+    List<GroupMember>? members,
+    List<Expense>? expenses,
   }) {
     return Group(
       id: id ?? this.id,
@@ -64,6 +71,7 @@ class Group {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       members: members ?? this.members,
+      expenses: expenses ?? this.expenses,
     );
   }
 
@@ -77,7 +85,8 @@ class Group {
         other.createdBy == createdBy &&
         other.createdAt == createdAt &&
         other.updatedAt == updatedAt &&
-        listEquals(other.members, members);
+        listEquals(other.members, members) &&
+        listEquals(other.expenses, expenses);
   }
 
   @override
@@ -88,6 +97,7 @@ class Group {
         createdBy.hashCode ^
         createdAt.hashCode ^
         updatedAt.hashCode ^
-        members.hashCode;
+        members.hashCode ^
+        expenses.hashCode;
   }
 }

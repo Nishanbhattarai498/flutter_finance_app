@@ -44,19 +44,19 @@ class GroupProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> createGroup(String name, String? description) async {
+  Future<bool> createGroup(Map<String, dynamic> groupData) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      final response = await _supabaseService.createGroup(name, description);
+      final response = await _supabaseService.createGroup(groupData);
       final newGroup = Group.fromJson(response);
-      _groups.add(newGroup);
+      _groups.insert(0, newGroup);
 
       // Update cache
       final cachedGroups = await _cacheManager.getCachedGroups() ?? [];
-      cachedGroups.add(response);
+      cachedGroups.insert(0, response);
       await _cacheManager.cacheGroups(cachedGroups);
 
       _isLoading = false;
@@ -70,15 +70,18 @@ class GroupProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> updateGroup(String groupId, String name, String? description) async {
+  Future<bool> updateGroup(String groupId, Map<String, dynamic> data) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      final response = await _supabaseService.updateGroup(groupId, name, description);
+      final response = await _supabaseService.updateGroup(groupId, data);
       final updatedGroup = Group.fromJson(response);
-      _groups = _groups.map((g) => g.id == groupId ? updatedGroup : g).toList();
+      final index = _groups.indexWhere((g) => g.id == groupId);
+      if (index != -1) {
+        _groups[index] = updatedGroup;
+      }
 
       // Update cache
       final cachedGroups = await _cacheManager.getCachedGroups() ?? [];

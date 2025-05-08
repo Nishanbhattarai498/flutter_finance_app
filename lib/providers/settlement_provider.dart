@@ -24,11 +24,9 @@ class SettlementProvider with ChangeNotifier {
       notifyListeners();
 
       // Try to get cached data first
-      final cachedSettlements = await _cacheManager.getCachedData('user_settlements');
+      final cachedSettlements = await _cacheManager.getCachedSettlements();
       if (cachedSettlements != null) {
-        _settlements = (cachedSettlements as List)
-            .map((s) => Settlement.fromJson(s))
-            .toList();
+        _settlements = cachedSettlements.map((s) => Settlement.fromJson(s)).toList();
         notifyListeners();
       }
 
@@ -36,7 +34,7 @@ class SettlementProvider with ChangeNotifier {
       if (await _cacheManager.shouldSync()) {
         final response = await _supabaseService.getUserSettlements();
         _settlements = response.map((s) => Settlement.fromJson(s)).toList();
-        await _cacheManager.cacheData('user_settlements', response);
+        await _cacheManager.cacheSettlements(response);
       }
     } catch (e) {
       _error = e.toString();
@@ -46,30 +44,20 @@ class SettlementProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> createSettlement({
-    required double amount,
-    required String payerId,
-    required String receiverId,
-    String? groupId,
-  }) async {
+  Future<bool> createSettlement(Map<String, dynamic> settlementData) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      final response = await _supabaseService.createSettlement(
-        amount: amount,
-        payerId: payerId,
-        receiverId: receiverId,
-        groupId: groupId,
-      );
+      final response = await _supabaseService.createSettlement(settlementData);
       final newSettlement = Settlement.fromJson(response);
-      _settlements.add(newSettlement);
+      _settlements.insert(0, newSettlement);
 
       // Update cache
-      final cachedSettlements = await _cacheManager.getCachedData('user_settlements') ?? [];
-      cachedSettlements.add(response);
-      await _cacheManager.cacheData('user_settlements', cachedSettlements);
+      final cachedSettlements = await _cacheManager.getCachedSettlements() ?? [];
+      cachedSettlements.insert(0, response);
+      await _cacheManager.cacheSettlements(cachedSettlements);
 
       _isLoading = false;
       notifyListeners();
@@ -82,22 +70,25 @@ class SettlementProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> updateSettlementStatus(String settlementId, String status) async {
+  Future<bool> updateSettlement(String settlementId, Map<String, dynamic> data) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      final response = await _supabaseService.updateSettlementStatus(settlementId, status);
+      final response = await _supabaseService.updateSettlement(settlementId, data);
       final updatedSettlement = Settlement.fromJson(response);
-      _settlements = _settlements.map((s) => s.id == settlementId ? updatedSettlement : s).toList();
+      final index = _settlements.indexWhere((s) => s.id == settlementId);
+      if (index != -1) {
+        _settlements[index] = updatedSettlement;
+      }
 
       // Update cache
-      final cachedSettlements = await _cacheManager.getCachedData('user_settlements') ?? [];
+      final cachedSettlements = await _cacheManager.getCachedSettlements() ?? [];
       final cacheIndex = cachedSettlements.indexWhere((s) => s['id'] == settlementId);
       if (cacheIndex != -1) {
         cachedSettlements[cacheIndex] = response;
-        await _cacheManager.cacheData('user_settlements', cachedSettlements);
+        await _cacheManager.cacheSettlements(cachedSettlements);
       }
 
       _isLoading = false;
@@ -121,9 +112,44 @@ class SettlementProvider with ChangeNotifier {
       _settlements.removeWhere((s) => s.id == settlementId);
 
       // Update cache
-      final cachedSettlements = await _cacheManager.getCachedData('user_settlements') ?? [];
+      final cachedSettlements = await _cacheManager.getCachedSettlements() ?? [];
       cachedSettlements.removeWhere((s) => s['id'] == settlementId);
-      await _cacheManager.cacheData('user_settlements', cachedSettlements);
+      await _cacheManager.cacheSettlements(cachedSettlements);
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> markSettlementAsPaid(String settlementId) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final response = await _supabaseService.updateSettlement(
+        settlementId,
+        {'status': 'paid'},
+      );
+      final updatedSettlement = Settlement.fromJson(response);
+      final index = _settlements.indexWhere((s) => s.id == settlementId);
+      if (index != -1) {
+        _settlements[index] = updatedSettlement;
+      }
+
+      // Update cache
+      final cachedSettlements = await _cacheManager.getCachedSettlements() ?? [];
+      final cacheIndex = cachedSettlements.indexWhere((s) => s['id'] == settlementId);
+      if (cacheIndex != -1) {
+        cachedSettlements[cacheIndex] = response;
+        await _cacheManager.cacheSettlements(cachedSettlements);
+      }
 
       _isLoading = false;
       notifyListeners();

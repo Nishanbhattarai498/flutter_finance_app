@@ -1,47 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/models/settlement.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
-import 'package:flutter_finance_app/providers/group_provider.dart';
+import 'package:flutter_finance_app/providers/settlement_provider.dart';
 import 'package:flutter_finance_app/screens/settlements/add_settlement_screen.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 class SettlementsScreen extends StatefulWidget {
   const SettlementsScreen({Key? key}) : super(key: key);
 
   @override
-  _SettlementsScreenState createState() => _SettlementsScreenState();
+  State<SettlementsScreen> createState() => _SettlementsScreenState();
 }
 
 class _SettlementsScreenState extends State<SettlementsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadSettlements();
+    _loadData();
   }
 
-  Future<void> _loadSettlements() async {
+  Future<void> _loadData() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final userId = authProvider.userId;
 
     if (userId != null) {
-      await Provider.of<GroupProvider>(
-        context,
-        listen: false,
-      ).fetchSettlements(userId);
+      await Provider.of<SettlementProvider>(context, listen: false)
+          .fetchUserSettlements();
     }
-  }
-
-  Future<void> _refreshSettlements() async {
-    await _loadSettlements();
   }
 
   @override
   Widget build(BuildContext context) {
-    final groupProvider = Provider.of<GroupProvider>(context);
-    final authProvider = Provider.of<AuthProvider>(context);
-    final settlements = groupProvider.settlements;
-    final currentUserId = authProvider.userId;
+    final settlementProvider = Provider.of<SettlementProvider>(context);
+    final settlements = settlementProvider.settlements;
 
     return Scaffold(
       appBar: AppBar(
@@ -49,131 +40,104 @@ class _SettlementsScreenState extends State<SettlementsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const AddSettlementScreen()),
-              );
-            },
+            onPressed: () => _navigateToAddSettlement(context),
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _refreshSettlements,
-        child: settlements.isEmpty
-            ? _buildEmptyState()
-            : ListView.builder(
-                padding: const EdgeInsets.all(16.0),
-                itemCount: settlements.length,
-                itemBuilder: (context, index) {
-                  final settlement = settlements[index];
-                  final isUserPayer = settlement.payerId == currentUserId;
-                  final isUserReceiver = settlement.receiverId == currentUserId;
-
-                  return _buildSettlementCard(
-                    context,
-                    settlement,
-                    isUserPayer,
-                    isUserReceiver,
-                  );
-                },
-              ),
-      ),
+      body: settlementProvider.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : settlements.isEmpty
+              ? const Center(child: Text('No settlements yet'))
+              : ListView.builder(
+                  itemCount: settlements.length,
+                  itemBuilder: (context, index) {
+                    final settlement = settlements[index];
+                    return _SettlementCard(settlement: settlement);
+                  },
+                ),
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.swap_horiz, size: 64, color: Colors.grey),
-          const SizedBox(height: 16),
-          Text(
-            'No settlements yet',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Record payments between friends to keep track of settlements',
-            style: Theme.of(context).textTheme.bodySmall,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const AddSettlementScreen()),
-              );
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Add Settlement'),
-          ),
-        ],
+  void _navigateToAddSettlement(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const AddSettlementScreen(),
+        fullscreenDialog: true,
       ),
     );
   }
+}
 
-  Widget _buildSettlementCard(
-    BuildContext context,
-    Settlement settlement,
-    bool isUserPayer,
-    bool isUserReceiver,
-  ) {
-    final currencyFormatter = NumberFormat.currency(symbol: '\$');
-    final dateFormatter = DateFormat('MMM d, yyyy');
+class _SettlementCard extends StatelessWidget {
+  final Settlement settlement;
+
+  const _SettlementCard({
+    Key? key,
+    required this.settlement,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final currentUserId = authProvider.userId;
+
+    final isPayer = settlement.payerId == currentUserId;
+    final isReceiver = settlement.receiverId == currentUserId;
 
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: RichText(
-                    text: TextSpan(
-                      style: Theme.of(context).textTheme.titleMedium,
-                      children: [
-                        TextSpan(
-                          text: isUserPayer ? 'You' : settlement.payerName,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const TextSpan(text: ' paid '),
-                        TextSpan(
-                          text: isUserReceiver
-                              ? 'you'
-                              : settlement.receiverName,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                  ),
+                Text(
+                  isPayer ? 'You paid' : 'You received',
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
                 Text(
-                  currencyFormatter.format(settlement.amount),
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isUserPayer
-                        ? Theme.of(context).colorScheme.error
-                        : Theme.of(context).colorScheme.primary,
-                  ),
+                  'NPR ${settlement.amount.toStringAsFixed(2)}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: isPayer ? Colors.red : Colors.green,
+                      ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
-              dateFormatter.format(settlement.createdAt),
-              style: Theme.of(context).textTheme.bodySmall,
+              isPayer
+                  ? 'To: ${settlement.receiverId}'
+                  : 'From: ${settlement.payerId}',
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
             if (settlement.notes != null && settlement.notes!.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
                 settlement.notes!,
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  settlement.status.toUpperCase(),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: settlement.status == 'completed'
+                            ? Colors.green
+                            : Colors.orange,
+                      ),
+                ),
+                Text(
+                  settlement.createdAt.toString().split('.')[0],
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
           ],
         ),
       ),
