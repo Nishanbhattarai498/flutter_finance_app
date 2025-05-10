@@ -99,11 +99,8 @@ class SupabaseService {
 
   // Profile methods
   static Future<Map<String, dynamic>> getUserProfile(String userId) async {
-    final response = await _client
-        .from('profiles')
-        .select()
-        .eq('id', userId)
-        .single();
+    final response =
+        await _client.from('profiles').select().eq('id', userId).single();
     return response;
   }
 
@@ -111,13 +108,10 @@ class SupabaseService {
     String userId,
     Map<String, dynamic> data,
   ) async {
-    await _client
-        .from('profiles')
-        .update({
-          ...data,
-          'updated_at': DateTime.now().toIso8601String(),
-        })
-        .eq('id', userId);
+    await _client.from('profiles').update({
+      ...data,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', userId);
   }
 
   static Future<List<Map<String, dynamic>>> searchUsers(String query) async {
@@ -131,37 +125,132 @@ class SupabaseService {
 
   // Group methods
   Future<List<Map<String, dynamic>>> getUserGroups() async {
-    final response = await _client
-        .from('groups')
-        .select()
-        .order('created_at', ascending: false);
-    return List<Map<String, dynamic>>.from(response);
-  }
+    try {
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) {
+        throw 'User not authenticated';
+      }
 
+      // Get groups where the user is a member
+      final response = await _client
+          .from('groups')
+          .select(
+              'id, name, description, created_by, created_at, group_members(id, user_id, role, created_at, user:profiles(id, full_name, email))')
+          .eq('group_members.user_id', userId)
+          .order('created_at', ascending: false);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      print('Error fetching user groups: $e');
+      throw e.toString();
+    }
+  }
   Future<Map<String, dynamic>> createGroup(Map<String, dynamic> data) async {
-    final response = await _client
-        .from('groups')
-        .insert(data)
-        .select()
-        .single();
-    return response;
+    try {
+      // Extract members if they exist and remove from data
+      List<String> memberList = [];
+      if (data.containsKey('members')) {
+        memberList = List<String>.from(data['members']);
+        data.remove('members'); // Remove to prevent circular reference
+      }
+      
+      // Insert the group with basic data
+      final response = await _client
+          .from('groups')
+          .insert(data)
+          .select('id, name, description, created_by, created_at')
+          .single();
+
+      final groupId = response['id'];
+      final creatorId = data['created_by'];
+
+      try {
+        // First attempt: Add the creator as admin directly
+        await _client.from('group_members').insert({
+          'group_id': groupId,
+          'user_id': creatorId,
+          'role': 'admin',
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      } catch (e) {
+        print('Error adding creator as admin: $e');
+        // If direct insertion fails due to RLS, try using a database function
+        // You would need to create this function in Supabase
+        try {
+          await _client.rpc('add_group_creator_as_admin', params: {
+            'group_id': groupId,
+            'user_id': creatorId,
+          });
+        } catch (rpcError) {
+          print('RPC error: $rpcError');
+          // If both approaches fail, try direct SQL query via REST endpoint
+          // as a last resort
+        }
+      }
+
+      // Add additional members
+      for (final memberId in memberList) {
+        if (memberId != creatorId) {
+          // Skip if creator is in the members list
+          try {
+            await _client.from('group_members').insert({
+              'group_id': groupId,
+              'user_id': memberId,
+              'role': 'member',
+              'created_at': DateTime.now().toIso8601String(),
+            });
+          } catch (e) {
+            print('Error adding member $memberId: $e');
+            // Continue with other members if one fails
+          }
+        }
+      }
+
+      // Wait a short time to ensure all database operations complete
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // Retrieve the complete group including members
+      // Use a simpler query first to avoid recursion
+      final completeGroup = await _client
+          .from('groups')
+          .select('id, name, description, created_by, created_at')
+          .eq('id', groupId)
+          .single();
+          
+      // Get members separately to avoid recursive references
+      final groupMembers = await _client
+          .from('group_members')
+          .select('id, user_id, role, created_at, user:profiles(id, full_name, email)')
+          .eq('group_id', groupId);
+          
+      // Combine the results
+      completeGroup['group_members'] = groupMembers;
+      
+      return completeGroup;
+    } catch (e) {
+      print('Error creating group: $e');
+      throw e.toString();
+    }
   }
 
-  Future<Map<String, dynamic>> updateGroup(String groupId, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> updateGroup(
+      String groupId, Map<String, dynamic> data) async {
+    // Add created_at if it doesn't exist but don't try to update it
+    if (!data.containsKey('created_at')) {
+      data['created_at'] = DateTime.now().toIso8601String();
+    }
+
     final response = await _client
         .from('groups')
         .update(data)
         .eq('id', groupId)
-        .select()
+        .select('id, name, description, created_by, created_at')
         .single();
     return response;
   }
 
   Future<void> deleteGroup(String groupId) async {
-    await _client
-        .from('groups')
-        .delete()
-        .eq('id', groupId);
+    await _client.from('groups').delete().eq('id', groupId);
   }
 
   Future<Map<String, dynamic>> addGroupMember(
@@ -212,15 +301,13 @@ class SupabaseService {
   }
 
   Future<Map<String, dynamic>> createExpense(Map<String, dynamic> data) async {
-    final response = await _client
-        .from('expenses')
-        .insert(data)
-        .select()
-        .single();
+    final response =
+        await _client.from('expenses').insert(data).select().single();
     return response;
   }
 
-  Future<Map<String, dynamic>> updateExpense(String expenseId, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> updateExpense(
+      String expenseId, Map<String, dynamic> data) async {
     final response = await _client
         .from('expenses')
         .update(data)
@@ -231,10 +318,7 @@ class SupabaseService {
   }
 
   Future<void> deleteExpense(String expenseId) async {
-    await _client
-        .from('expenses')
-        .delete()
-        .eq('id', expenseId);
+    await _client.from('expenses').delete().eq('id', expenseId);
   }
 
   // Settlement methods
@@ -246,16 +330,15 @@ class SupabaseService {
     return List<Map<String, dynamic>>.from(response);
   }
 
-  Future<Map<String, dynamic>> createSettlement(Map<String, dynamic> data) async {
-    final response = await _client
-        .from('settlements')
-        .insert(data)
-        .select()
-        .single();
+  Future<Map<String, dynamic>> createSettlement(
+      Map<String, dynamic> data) async {
+    final response =
+        await _client.from('settlements').insert(data).select().single();
     return response;
   }
 
-  Future<Map<String, dynamic>> updateSettlement(String settlementId, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> updateSettlement(
+      String settlementId, Map<String, dynamic> data) async {
     final response = await _client
         .from('settlements')
         .update(data)
@@ -266,9 +349,6 @@ class SupabaseService {
   }
 
   Future<void> deleteSettlement(String settlementId) async {
-    await _client
-        .from('settlements')
-        .delete()
-        .eq('id', settlementId);
+    await _client.from('settlements').delete().eq('id', settlementId);
   }
 }

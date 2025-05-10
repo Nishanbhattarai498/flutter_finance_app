@@ -69,12 +69,12 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         ).showSnackBar(const SnackBar(content: Text('User not authenticated')));
         return;
       }
-
       final groupData = {
         'name': _nameController.text.trim(),
         'description': _descriptionController.text.trim(),
         'created_by': authProvider.userId,
         'created_at': DateTime.now().toIso8601String(),
+        'members': selectedFriends, // Add the selected friends as members
       };
 
       final success = await groupProvider.createGroup(groupData);
