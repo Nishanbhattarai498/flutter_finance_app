@@ -112,7 +112,6 @@ class _AddSettlementScreenState extends State<AddSettlementScreen> {
     if (_selectedGroup != null) {
       groupMembers = _selectedGroup!.members;
     }
-
     return Scaffold(
       appBar: AppBar(title: const Text('Record Settlement')),
       body: SafeArea(
@@ -120,6 +119,7 @@ class _AddSettlementScreenState extends State<AddSettlementScreen> {
           key: _formKey,
           child: ListView(
             padding: const EdgeInsets.all(16.0),
+            physics: const AlwaysScrollableScrollPhysics(),
             children: [
               // Amount
               CustomTextField(
@@ -275,14 +275,16 @@ class _AddSettlementScreenState extends State<AddSettlementScreen> {
                 prefixIcon: Icons.note_outlined,
                 maxLines: 3,
               ),
-
               const SizedBox(height: 32),
 
               // Save button
-              CustomButton(
-                text: 'Record Settlement',
-                isLoading: groupProvider.isLoading,
-                onPressed: _saveSettlement,
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24.0),
+                child: CustomButton(
+                  text: 'Record Settlement',
+                  isLoading: groupProvider.isLoading,
+                  onPressed: _saveSettlement,
+                ),
               ),
             ],
           ),

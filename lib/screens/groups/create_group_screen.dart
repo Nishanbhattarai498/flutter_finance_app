@@ -117,6 +117,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           key: _formKey,
           child: ListView(
             padding: const EdgeInsets.all(16.0),
+            physics: const AlwaysScrollableScrollPhysics(),
             children: [
               CustomTextField(
                 controller: _nameController,
@@ -199,13 +200,15 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                   }).toList(),
                 ),
               ],
-
               const SizedBox(height: 32),
 
-              CustomButton(
-                text: 'Create Group',
-                isLoading: groupProvider.isLoading,
-                onPressed: _createGroup,
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24.0),
+                child: CustomButton(
+                  text: 'Create Group',
+                  isLoading: groupProvider.isLoading,
+                  onPressed: _createGroup,
+                ),
               ),
             ],
           ),

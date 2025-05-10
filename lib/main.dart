@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
+import 'package:flutter_finance_app/providers/budget_provider.dart';
 import 'package:flutter_finance_app/providers/expense_provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
 import 'package:flutter_finance_app/providers/settlement_provider.dart';
@@ -42,6 +43,9 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => SettlementProvider(supabaseService, cacheManager),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => BudgetProvider(supabaseService),
         ),
       ],
       child: const MyApp(),

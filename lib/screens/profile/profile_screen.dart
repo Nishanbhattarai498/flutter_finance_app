@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
 import 'package:flutter_finance_app/screens/auth/login_screen.dart';
+import 'package:flutter_finance_app/screens/budget/budget_setting_screen.dart';
 import 'package:flutter_finance_app/widgets/custom_button.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_finance_app/screens/profile/edit_profile_screen.dart';
@@ -74,6 +75,18 @@ class ProfileScreen extends StatelessWidget {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                             builder: (_) => const EditProfileScreen()),
+                      );
+                    },
+                  ),
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.account_balance_wallet_outlined),
+                    title: const Text('Budget Settings'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const BudgetSettingScreen()),
                       );
                     },
                   ),

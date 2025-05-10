@@ -1,4 +1,3 @@
-import 'package:flutter_finance_app/secrets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseService {
@@ -131,35 +130,82 @@ class SupabaseService {
         throw 'User not authenticated';
       }
 
-      // First, get the IDs of groups the user is a member of
-      final groupIds = await _client
+      // First, try to get all groups where the user is the creator
+      final createdGroups = await _client
+          .from('groups')
+          .select('id, name, description, created_by, created_at')
+          .eq('created_by', userId)
+          .order('created_at', ascending: false);
+
+      // Then, get IDs of groups the user is a member of (but didn't create)
+      final groupMemberIds = await _client
           .from('group_members')
           .select('group_id')
           .eq('user_id', userId);
 
-      if (groupIds.isEmpty) {
+      List<Map<String, dynamic>> memberGroups = [];
+
+      if (groupMemberIds.isNotEmpty) {
+        // Extract the array of group IDs
+        final List<String> ids =
+            List<String>.from(groupMemberIds.map((item) => item['group_id']));
+
+        // Get detailed group information for these IDs
+        // Filter out groups the user created to avoid duplication
+        memberGroups = await _client
+            .from('groups')
+            .select('id, name, description, created_by, created_at')
+            .inFilter('id', ids)
+            .neq('created_by', userId) // Avoid duplicates with created groups
+            .order('created_at', ascending: false);
+      }
+
+      // Combine the two lists
+      final allGroups = [...createdGroups, ...memberGroups];
+
+      if (allGroups.isEmpty) {
         return [];
       }
 
-      // Extract the array of group IDs
-      final List<String> ids =
-          List<String>.from(groupIds.map((item) => item['group_id']));
-      // Get detailed group information for these IDs
-      final groups = await _client
-          .from('groups')
-          .select('id, name, description, created_by, created_at')
-          .inFilter('id', ids)
-          .order('created_at', ascending: false);
+      // For each group, get its members separately WITHOUT using the user:profiles join
+      // which is causing the recursion
+      final result = await Future.wait(allGroups.map((group) async {
+        try {
+          // Get basic member info without the join that causes recursion
+          final members = await _client
+              .from('group_members')
+              .select('id, user_id, role, created_at')
+              .eq('group_id', group['id']);
 
-      // For each group, get its members separately
-      final result = await Future.wait(groups.map((group) async {
-        final members = await _client
-            .from('group_members')
-            .select(
-                'id, user_id, role, created_at, user:profiles(id, full_name, email)')
-            .eq('group_id', group['id']);
+          // For each member, get the user profile separately
+          for (var member in members) {
+            try {
+              final userProfile = await _client
+                  .from('profiles')
+                  .select('id, full_name, email')
+                  .eq('id', member['user_id'])
+                  .single();
 
-        group['group_members'] = members;
+              // Add the user info manually
+              member['user'] = userProfile;
+            } catch (e) {
+              print(
+                  'Error fetching profile for member ${member['user_id']}: $e');
+              // If we can't get a profile, add a placeholder
+              member['user'] = {
+                'id': member['user_id'],
+                'full_name': 'Unknown User',
+                'email': 'unknown@example.com'
+              };
+            }
+          }
+
+          group['group_members'] = members;
+        } catch (e) {
+          print('Error fetching members for group ${group['id']}: $e');
+          group['group_members'] = [];
+        }
+
         return group;
       }));
 
@@ -351,9 +397,58 @@ class SupabaseService {
   }
 
   Future<Map<String, dynamic>> createExpense(Map<String, dynamic> data) async {
-    final response =
-        await _client.from('expenses').insert(data).select().single();
-    return response;
+    try {
+      print('Creating expense with data: $data'); // Debug log
+
+      // Force a schema refresh before inserting to handle cache issues
+      try {
+        await _client.from('expenses').select('id').limit(1);
+      } catch (_) {
+        // Ignore errors from this call, it's just to warm up the schema cache
+      }
+
+      // Make sure all required fields are present
+      if (!data.containsKey('title')) {
+        throw Exception("Missing required 'title' field");
+      }
+
+      // Extract participants before sending to Supabase
+      List<String> participants = [];
+      if (data.containsKey('participants')) {
+        participants = List<String>.from(data['participants']);
+        data.remove('participants'); // Remove to prevent DB errors
+      }
+
+      final response =
+          await _client.from('expenses').insert(data).select().single();
+      print('Success response: $response'); // Debug log
+
+      // Create expense participants if provided
+      final expenseId = response['id'];
+      if (participants.isNotEmpty) {
+        try {
+          await Future.wait(participants.map((userId) async {
+            await _client.from('expense_participants').insert({
+              'expense_id': expenseId,
+              'user_id': userId,
+              'created_at': DateTime.now().toIso8601String(),
+              'updated_at': DateTime.now().toIso8601String(),
+            });
+          }));
+
+          // Add participants back to the response for the app
+          response['participants'] = participants;
+        } catch (e) {
+          print('Error adding participants: $e');
+          // Continue even if adding participants fails
+        }
+      }
+
+      return response;
+    } catch (e) {
+      print('Error creating expense: $e'); // Debug error log
+      rethrow; // Re-throw the error to be caught by the caller
+    }
   }
 
   Future<Map<String, dynamic>> updateExpense(
@@ -400,5 +495,144 @@ class SupabaseService {
 
   Future<void> deleteSettlement(String settlementId) async {
     await _client.from('settlements').delete().eq('id', settlementId);
+  }
+
+  // Budget methods
+  Future<List<Map<String, dynamic>>> getUserBudgets() async {
+    try {
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) {
+        throw 'User not authenticated';
+      }
+
+      final response = await _client
+          .from('budgets')
+          .select()
+          .eq('user_id', userId)
+          .order('year', ascending: false)
+          .order('month', ascending: false);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      print('Error fetching user budgets: $e');
+      throw e.toString();
+    }
+  }
+
+  Future<Map<String, dynamic>> getCurrentMonthBudget() async {
+    try {
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) {
+        throw 'User not authenticated';
+      }
+
+      final now = DateTime.now();
+      final currentMonth = now.month;
+      final currentYear = now.year;
+
+      final response = await _client
+          .from('budgets')
+          .select()
+          .eq('user_id', userId)
+          .eq('month', currentMonth)
+          .eq('year', currentYear)
+          .maybeSingle();
+
+      if (response == null) {
+        // Create default budget for current month if it doesn't exist
+        final newBudget = {
+          'user_id': userId,
+          'amount': 0.0,
+          'currency': 'NPR',
+          'month': currentMonth,
+          'year': currentYear,
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        };
+
+        return await createBudget(newBudget);
+      }
+
+      return response;
+    } catch (e) {
+      print('Error fetching current month budget: $e');
+      throw e.toString();
+    }
+  }
+
+  Future<Map<String, dynamic>> createBudget(Map<String, dynamic> data) async {
+    try {
+      final response =
+          await _client.from('budgets').insert(data).select().single();
+      return response;
+    } catch (e) {
+      print('Error creating budget: $e');
+      throw e.toString();
+    }
+  }
+
+  Future<Map<String, dynamic>> updateBudget(
+      String budgetId, double amount) async {
+    try {
+      final response = await _client
+          .from('budgets')
+          .update({
+            'amount': amount,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', budgetId)
+          .select()
+          .single();
+      return response;
+    } catch (e) {
+      print('Error updating budget: $e');
+      throw e.toString();
+    }
+  }
+
+  Future<Map<String, dynamic>> getBudgetSummary(int month, int year) async {
+    try {
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) {
+        throw 'User not authenticated';
+      }
+
+      // Get budget for the specified month
+      final budgetResponse = await _client
+          .from('budgets')
+          .select()
+          .eq('user_id', userId)
+          .eq('month', month)
+          .eq('year', year)
+          .maybeSingle();
+
+      // Calculate total expenses for the month
+      final startDate = DateTime(year, month, 1);
+      final endDate = DateTime(year, month + 1, 0); // Last day of month
+
+      final expensesResponse = await _client
+          .from('expenses')
+          .select('amount')
+          .eq('user_id', userId)
+          .gte('date', startDate.toIso8601String())
+          .lte('date', endDate.toIso8601String());
+
+      double totalExpenses = 0.0;
+      for (var expense in expensesResponse) {
+        totalExpenses += (expense['amount'] as num).toDouble();
+      }
+
+      // Return a summary
+      return {
+        'budget': budgetResponse ?? {'amount': 0.0},
+        'totalExpenses': totalExpenses,
+        'remaining': budgetResponse != null
+            ? (budgetResponse['amount'] as num).toDouble() - totalExpenses
+            : -totalExpenses
+      };
+    } catch (e) {
+      print('Error getting budget summary: $e');
+      throw e.toString();
+    }
   }
 }

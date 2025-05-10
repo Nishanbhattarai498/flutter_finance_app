@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/models/expense.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
+import 'package:flutter_finance_app/providers/budget_provider.dart';
 import 'package:flutter_finance_app/providers/expense_provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
 import 'package:flutter_finance_app/providers/settlement_provider.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/balance_card.dart';
+import 'package:flutter_finance_app/screens/dashboard/widgets/budget_card.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/expense_chart.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/recent_expenses.dart';
 import 'package:flutter_finance_app/screens/expenses/add_expense_screen.dart';
@@ -20,10 +22,11 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProviderStateMixin {
+class _DashboardScreenState extends State<DashboardScreen>
+    with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
   late final AnimationController _fabAnimationController;
-  
+
   final List<Widget> _pages = const [
     _DashboardHomePage(),
     GroupsScreen(),
@@ -119,20 +122,21 @@ class _DashboardHomePage extends StatefulWidget {
 }
 
 class _DashboardHomePageState extends State<_DashboardHomePage> {
-  static const double _monthlyBudget = 50000.0; // NPR 50,000 default budget
   bool _isLoading = true;
   String? _error;
   final _refreshKey = GlobalKey<RefreshIndicatorState>();
-
   @override
   void initState() {
     super.initState();
-    _loadData();
+    // Fetch data after the initial build phase
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
   }
 
   Future<void> _loadData() async {
     if (!mounted) return;
-    
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -149,10 +153,11 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
       await Future.wait([
         Provider.of<ExpenseProvider>(context, listen: false)
             .fetchUserExpenses(userId),
-        Provider.of<GroupProvider>(context, listen: false)
-            .fetchUserGroups(),
+        Provider.of<GroupProvider>(context, listen: false).fetchUserGroups(),
         Provider.of<SettlementProvider>(context, listen: false)
             .fetchUserSettlements(),
+        Provider.of<BudgetProvider>(context, listen: false)
+            .fetchCurrentBudget(),
       ]);
     } catch (e) {
       if (!mounted) return;
@@ -172,6 +177,7 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final expenseProvider = Provider.of<ExpenseProvider>(context);
+    final budgetProvider = Provider.of<BudgetProvider>(context);
 
     final String fullName = authProvider.userProfile?['full_name'] ?? 'User';
     final double currentMonthTotal = expenseProvider.getCurrentMonthTotal();
@@ -202,9 +208,11 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
                               children: [
                                 BalanceCard(
                                   spent: currentMonthTotal,
-                                  budget: _monthlyBudget,
+                                  budget: budgetProvider.budgetAmount,
                                   monthlyRecurring: monthlyRecurring,
                                 ),
+                                const SizedBox(height: 16),
+                                const BudgetCard(),
                                 const SizedBox(height: 24),
                                 _buildExpenseTrend(expenseProvider),
                                 const SizedBox(height: 24),
@@ -214,7 +222,8 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
                           ),
                         ),
                         _buildExpensesList(expenses),
-                        const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
+                        const SliverPadding(
+                            padding: EdgeInsets.only(bottom: 80)),
                       ],
                     ),
         ),

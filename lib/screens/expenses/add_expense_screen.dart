@@ -70,24 +70,25 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           context,
         ).showSnackBar(const SnackBar(content: Text('User not authenticated')));
         return;
-      }
-
-      // If no participants are selected, add the current user
+      } // If no participants are selected, add the current user
       if (_selectedParticipants.isEmpty) {
         _selectedParticipants = [authProvider.userId!];
       }
 
-      // Create expense data
+      // Create expense data with all required fields
       final expenseData = {
         'user_id': authProvider.userId,
         'group_id': _selectedGroup?.id,
+        'title': _descriptionController.text.trim(), // Title field (required)
         'description': _descriptionController.text.trim(),
         'amount': double.parse(_amountController.text),
         'currency': 'NPR',
         'category': _selectedCategory,
         'is_monthly': _isMonthlyExpense,
         'participants': _selectedParticipants,
+        'date': DateTime.now().toIso8601String(), // Required date field
         'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
       };
 
       final success = await expenseProvider.addExpense(expenseData);
@@ -122,6 +123,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           key: _formKey,
           child: ListView(
             padding: const EdgeInsets.all(16.0),
+            // Add bottom padding to prevent overflow
+            physics: const AlwaysScrollableScrollPhysics(),
             children: [
               // Description
               CustomTextField(
@@ -329,13 +332,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     ),
                   );
                 },
-              ),
-
-              // Save button
-              CustomButton(
-                text: 'Save Expense',
-                isLoading: expenseProvider.isLoading,
-                onPressed: _saveExpense,
+              ), // Save button
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24.0),
+                child: CustomButton(
+                  text: 'Save Expense',
+                  isLoading: expenseProvider.isLoading,
+                  onPressed: _saveExpense,
+                ),
               ),
             ],
           ),
