@@ -1,7 +1,5 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_finance_app/providers/expense_provider.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter_finance_app/theme/app_theme.dart';
 import 'package:intl/intl.dart';
 
@@ -47,7 +45,8 @@ class ExpenseChart extends StatelessWidget {
                     return Padding(
                       padding: const EdgeInsets.only(top: 8.0),
                       child: Text(
-                        DateFormat('MMM').format(expenseData[value.toInt()]['date']),
+                        DateFormat('MMM')
+                            .format(expenseData[value.toInt()]['date']),
                         style: const TextStyle(
                           color: AppTheme.textColorLight,
                           fontWeight: FontWeight.bold,

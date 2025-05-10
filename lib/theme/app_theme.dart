@@ -13,6 +13,9 @@ class AppTheme {
   static const Color surfaceColor = Colors.white;
   static const Color textColor = Color(0xFF212121);
   static const Color textSecondaryColor = Color(0xFF757575);
+  static const Color primaryColorLight =
+      Color(0xFFBBDEFB); // Light variant of primary
+  static const Color textColorLight = Color(0xFFBDBDBD); // Light text color
 
   // Background Colors
   static const Color backgroundColorDark = Color(0xFF121212);
@@ -82,7 +85,8 @@ class AppTheme {
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: errorColor),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
       textTheme: const TextTheme(
         displayLarge: TextStyle(
@@ -194,7 +198,8 @@ class AppTheme {
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: errorColor),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
       textTheme: const TextTheme(
         displayLarge: TextStyle(

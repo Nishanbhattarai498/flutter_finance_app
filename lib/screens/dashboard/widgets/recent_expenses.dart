@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/models/expense.dart';
-import 'package:flutter_finance_app/screens/expenses/expense_details_screen.dart';
-import 'package:flutter_finance_app/providers/expense_provider.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter_finance_app/theme/app_theme.dart';
 
 class RecentExpenseItem extends StatelessWidget {
@@ -16,7 +13,6 @@ class RecentExpenseItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
     final currencyFormat = NumberFormat.currency(symbol: 'NPR ');
 
     return Card(
