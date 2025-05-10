@@ -3,6 +3,12 @@ import 'package:flutter_finance_app/providers/auth_provider.dart';
 import 'package:flutter_finance_app/screens/auth/login_screen.dart';
 import 'package:flutter_finance_app/widgets/custom_button.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_finance_app/screens/profile/edit_profile_screen.dart';
+import 'package:flutter_finance_app/screens/profile/settings_screen.dart';
+import 'package:flutter_finance_app/screens/profile/notifications_screen.dart';
+import 'package:flutter_finance_app/screens/profile/privacy_screen.dart';
+import 'package:flutter_finance_app/screens/profile/help_screen.dart';
+import 'package:flutter_finance_app/screens/profile/about_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -19,7 +25,9 @@ class ProfileScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             onPressed: () {
-              // Navigate to edit profile screen
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+              );
             },
           ),
         ],
@@ -63,7 +71,10 @@ class ProfileScreen extends StatelessWidget {
                     title: const Text('Edit Profile'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
-                      // Navigate to edit profile screen
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const EditProfileScreen()),
+                      );
                     },
                   ),
                   const Divider(),
@@ -72,7 +83,10 @@ class ProfileScreen extends StatelessWidget {
                     title: const Text('Settings'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
-                      // Navigate to settings screen
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const SettingsScreen()),
+                      );
                     },
                   ),
                   const Divider(),
@@ -81,7 +95,10 @@ class ProfileScreen extends StatelessWidget {
                     title: const Text('Notifications'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
-                      // Navigate to notifications settings
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const NotificationsScreen()),
+                      );
                     },
                   ),
                 ],
@@ -101,7 +118,10 @@ class ProfileScreen extends StatelessWidget {
                     title: const Text('Privacy & Security'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
-                      // Navigate to privacy settings
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const PrivacyScreen()),
+                      );
                     },
                   ),
                   const Divider(),
@@ -110,7 +130,9 @@ class ProfileScreen extends StatelessWidget {
                     title: const Text('Help & Support'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
-                      // Navigate to help center
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const HelpScreen()),
+                      );
                     },
                   ),
                   const Divider(),
@@ -119,7 +141,9 @@ class ProfileScreen extends StatelessWidget {
                     title: const Text('About'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
-                      // Navigate to about screen
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const AboutScreen()),
+                      );
                     },
                   ),
                 ],
