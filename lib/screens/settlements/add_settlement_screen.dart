@@ -3,6 +3,7 @@ import 'package:flutter_finance_app/models/group.dart';
 import 'package:flutter_finance_app/models/group_member.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
+import 'package:flutter_finance_app/providers/settlement_provider.dart';
 import 'package:flutter_finance_app/widgets/custom_button.dart';
 import 'package:flutter_finance_app/widgets/custom_text_field.dart';
 import 'package:provider/provider.dart';
@@ -41,7 +42,7 @@ class _AddSettlementScreenState extends State<AddSettlementScreen> {
     final groupProvider = Provider.of<GroupProvider>(context, listen: false);
 
     if (authProvider.userId != null) {
-      await groupProvider.fetchUserGroups(authProvider.userId!);
+      await groupProvider.fetchUserGroups();
 
       // Set current user as payer by default
       setState(() {
@@ -79,7 +80,9 @@ class _AddSettlementScreenState extends State<AddSettlementScreen> {
         'created_at': DateTime.now().toIso8601String(),
       };
 
-      final success = await groupProvider.addSettlement(settlementData);
+      final success =
+          await Provider.of<SettlementProvider>(context, listen: false)
+              .createSettlement(settlementData);
 
       if (!mounted) return;
 
@@ -199,11 +202,11 @@ class _AddSettlementScreenState extends State<AddSettlementScreen> {
                   ...groupMembers
                       .where((member) => member.userId != currentUserId)
                       .map((member) {
-                        return DropdownMenuItem<String>(
-                          value: member.userId,
-                          child: Text(member.displayName),
-                        );
-                      }),
+                    return DropdownMenuItem<String>(
+                      value: member.userId,
+                      child: Text(member.displayName),
+                    );
+                  }),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -236,16 +239,16 @@ class _AddSettlementScreenState extends State<AddSettlementScreen> {
                     ),
                   ...groupMembers
                       .where(
-                        (member) =>
-                            member.userId != _selectedPayerId &&
-                            member.userId != currentUserId,
-                      )
+                    (member) =>
+                        member.userId != _selectedPayerId &&
+                        member.userId != currentUserId,
+                  )
                       .map((member) {
-                        return DropdownMenuItem<String>(
-                          value: member.userId,
-                          child: Text(member.displayName),
-                        );
-                      }),
+                    return DropdownMenuItem<String>(
+                      value: member.userId,
+                      child: Text(member.displayName),
+                    );
+                  }),
                 ],
                 onChanged: (value) {
                   setState(() {

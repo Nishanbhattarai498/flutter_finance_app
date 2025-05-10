@@ -43,11 +43,11 @@ class AppTheme {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      cardTheme: CardTheme(
+      cardTheme: const CardTheme(
         color: surfaceColor,
         elevation: 2,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -156,11 +156,11 @@ class AppTheme {
         foregroundColor: textColorDark,
         elevation: 0,
       ),
-      cardTheme: CardTheme(
-        color: const Color(0xFF2A2A2A),
+      cardTheme: const CardTheme(
+        color: Color(0xFF2A2A2A),
         elevation: 2,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/models/group.dart';
+import 'package:flutter_finance_app/models/group_member.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
 import 'package:flutter_finance_app/screens/expenses/add_expense_screen.dart';
@@ -30,7 +31,6 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
     final groupProvider = Provider.of<GroupProvider>(context);
 
     // Calculate balances
@@ -136,9 +136,9 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                 Text(
                   currencyFormatter.format(totalGroupExpenses),
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                 ),
               ],
             ),
@@ -174,15 +174,23 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
               // Find member names
               final payer = widget.group.members.firstWhere(
                 (m) => m.userId == payerId,
-                orElse: () => null!,
+                orElse: () => GroupMember(
+                    userId: '',
+                    groupId: '',
+                    role: '',
+                    displayName: 'Unknown',
+                    createdAt: DateTime(1970)),
               );
 
               final receiver = widget.group.members.firstWhere(
                 (m) => m.userId == receiverId,
-                orElse: () => null!,
+                orElse: () => GroupMember(
+                    userId: '',
+                    groupId: '',
+                    role: '',
+                    displayName: 'Unknown',
+                    createdAt: DateTime(1970)),
               );
-
-              if (payer == null || receiver == null) return const SizedBox();
 
               final isUserInvolved =
                   (payerId == currentUserId || receiverId == currentUserId);
@@ -222,8 +230,8 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                   trailing: Text(
                     currencyFormatter.format(amount),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                 ),
               );
@@ -278,8 +286,8 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                     color: netBalance > 0
                         ? Colors.green
                         : netBalance < 0
-                        ? Colors.red
-                        : null,
+                            ? Colors.red
+                            : null,
                   ),
                 ),
               );
@@ -350,7 +358,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
         return Card(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           child: ListTile(
-            title: Text(expense.description),
+            title: Text(expense.description ?? ''),
             subtitle: Text(dateFormatter.format(expense.createdAt)),
             trailing: Text(
               currencyFormatter.format(expense.amount),

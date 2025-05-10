@@ -28,7 +28,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
       await Provider.of<GroupProvider>(
         context,
         listen: false,
-      ).fetchUserGroups(userId);
+      ).fetchUserGroups();
     }
   }
 
@@ -60,15 +60,15 @@ class _GroupsScreenState extends State<GroupsScreen> {
         child: groupProvider.isLoading
             ? const Center(child: CircularProgressIndicator())
             : groups.isEmpty
-            ? _buildEmptyState()
-            : ListView.builder(
-                padding: const EdgeInsets.all(16.0),
-                itemCount: groups.length,
-                itemBuilder: (context, index) {
-                  final group = groups[index];
-                  return _buildGroupCard(context, group);
-                },
-              ),
+                ? _buildEmptyState()
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16.0),
+                    itemCount: groups.length,
+                    itemBuilder: (context, index) {
+                      final group = groups[index];
+                      return _buildGroupCard(context, group);
+                    },
+                  ),
       ),
     );
   }

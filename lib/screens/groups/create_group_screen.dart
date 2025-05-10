@@ -77,21 +77,18 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         'created_at': DateTime.now().toIso8601String(),
       };
 
-      final result = await groupProvider.createGroup(
-        groupData,
-        selectedFriends,
-      );
+      final success = await groupProvider.createGroup(groupData);
 
       if (!mounted) return;
 
-      if (result['success']) {
+      if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Group created successfully')),
         );
 
-        await groupProvider.fetchUserGroups(authProvider.userId!);
+        await groupProvider.fetchUserGroups();
         final createdGroup = groupProvider.groups.firstWhere(
-          (group) => group.id == result['group_id'],
+          (group) => group.name == groupData['name'],
         );
 
         Navigator.of(context).pushReplacement(
@@ -102,7 +99,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Failed to create group'),
+            content: Text(groupProvider.errorMessage),
           ),
         );
       }

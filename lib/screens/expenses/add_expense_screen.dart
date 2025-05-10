@@ -53,7 +53,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     final groupProvider = Provider.of<GroupProvider>(context, listen: false);
 
     if (authProvider.userId != null) {
-      await groupProvider.fetchUserGroups(authProvider.userId!);
+      await groupProvider.fetchUserGroups();
     }
   }
 
@@ -144,7 +144,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 label: 'Amount (NPR)',
                 hint: '0.00',
                 prefixIcon: Icons.currency_rupee,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter an amount';

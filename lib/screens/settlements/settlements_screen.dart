@@ -82,7 +82,6 @@ class _SettlementCard extends StatelessWidget {
     final currentUserId = authProvider.userId;
 
     final isPayer = settlement.payerId == currentUserId;
-    final isReceiver = settlement.receiverId == currentUserId;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
