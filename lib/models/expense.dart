@@ -18,7 +18,7 @@ class Expense {
   final List<String> participants;
   final Map<String, dynamic>? user;
   final Map<String, dynamic>? group;
-
+  final String currency;
   Expense({
     required this.id,
     required this.title,
@@ -36,8 +36,8 @@ class Expense {
     this.participants = const [],
     this.user,
     this.group,
+    this.currency = 'NPR',
   });
-
   factory Expense.fromJson(Map<String, dynamic> json) {
     return Expense(
       id: json['id'] as String,
@@ -56,9 +56,9 @@ class Expense {
       participants: List<String>.from(json['participants'] ?? []),
       user: json['user'] as Map<String, dynamic>?,
       group: json['group'] as Map<String, dynamic>?,
+      currency: json['currency'] as String? ?? 'NPR',
     );
   }
-
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -77,6 +77,7 @@ class Expense {
       'participants': participants,
       'user': user,
       'group': group,
+      'currency': currency,
     };
   }
 
@@ -97,6 +98,7 @@ class Expense {
     List<String>? participants,
     Map<String, dynamic>? user,
     Map<String, dynamic>? group,
+    String? currency,
   }) {
     return Expense(
       id: id ?? this.id,
@@ -115,12 +117,12 @@ class Expense {
       participants: participants ?? this.participants,
       user: user ?? this.user,
       group: group ?? this.group,
+      currency: currency ?? this.currency,
     );
   }
 
   // Calculate monthly amount if it's a monthly expense
   double get monthlyAmount => isRecurring ? amount : 0;
-
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -138,6 +140,7 @@ class Expense {
         other.createdAt == createdAt &&
         other.updatedAt == updatedAt &&
         other.isMonthly == isMonthly &&
+        other.currency == currency &&
         listEquals(other.participants, participants);
   }
 
@@ -156,6 +159,7 @@ class Expense {
         createdAt.hashCode ^
         updatedAt.hashCode ^
         isMonthly.hashCode ^
+        currency.hashCode ^
         participants.hashCode;
   }
 }

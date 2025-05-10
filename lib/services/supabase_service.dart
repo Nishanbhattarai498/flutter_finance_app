@@ -131,20 +131,45 @@ class SupabaseService {
         throw 'User not authenticated';
       }
 
-      // Get groups where the user is a member
-      final response = await _client
+      // First, get the IDs of groups the user is a member of
+      final groupIds = await _client
+          .from('group_members')
+          .select('group_id')
+          .eq('user_id', userId);
+
+      if (groupIds.isEmpty) {
+        return [];
+      }
+
+      // Extract the array of group IDs
+      final List<String> ids =
+          List<String>.from(groupIds.map((item) => item['group_id']));
+      // Get detailed group information for these IDs
+      final groups = await _client
           .from('groups')
-          .select(
-              'id, name, description, created_by, created_at, group_members(id, user_id, role, created_at, user:profiles(id, full_name, email))')
-          .eq('group_members.user_id', userId)
+          .select('id, name, description, created_by, created_at')
+          .inFilter('id', ids)
           .order('created_at', ascending: false);
 
-      return List<Map<String, dynamic>>.from(response);
+      // For each group, get its members separately
+      final result = await Future.wait(groups.map((group) async {
+        final members = await _client
+            .from('group_members')
+            .select(
+                'id, user_id, role, created_at, user:profiles(id, full_name, email)')
+            .eq('group_id', group['id']);
+
+        group['group_members'] = members;
+        return group;
+      }));
+
+      return List<Map<String, dynamic>>.from(result);
     } catch (e) {
       print('Error fetching user groups: $e');
       throw e.toString();
     }
   }
+
   Future<Map<String, dynamic>> createGroup(Map<String, dynamic> data) async {
     try {
       // Extract members if they exist and remove from data
@@ -153,7 +178,7 @@ class SupabaseService {
         memberList = List<String>.from(data['members']);
         data.remove('members'); // Remove to prevent circular reference
       }
-      
+
       // Insert the group with basic data
       final response = await _client
           .from('groups')
@@ -216,16 +241,17 @@ class SupabaseService {
           .select('id, name, description, created_by, created_at')
           .eq('id', groupId)
           .single();
-          
+
       // Get members separately to avoid recursive references
       final groupMembers = await _client
           .from('group_members')
-          .select('id, user_id, role, created_at, user:profiles(id, full_name, email)')
+          .select(
+              'id, user_id, role, created_at, user:profiles(id, full_name, email)')
           .eq('group_id', groupId);
-          
+
       // Combine the results
       completeGroup['group_members'] = groupMembers;
-      
+
       return completeGroup;
     } catch (e) {
       print('Error creating group: $e');
@@ -265,12 +291,24 @@ class SupabaseService {
       'created_at': DateTime.now().toIso8601String(),
     });
 
-    final response = await _client
+    // Get the group data
+    final groupData = await _client
         .from('groups')
-        .select('*, group_members(*)')
+        .select('id, name, description, created_by, created_at')
         .eq('id', groupId)
         .single();
-    return response;
+
+    // Get members separately
+    final membersData = await _client
+        .from('group_members')
+        .select(
+            'id, user_id, role, created_at, user:profiles(id, full_name, email)')
+        .eq('group_id', groupId);
+
+    // Combine data
+    groupData['group_members'] = membersData;
+
+    return groupData;
   }
 
   Future<Map<String, dynamic>> removeGroupMember(
@@ -283,12 +321,24 @@ class SupabaseService {
         .eq('group_id', groupId)
         .eq('user_id', userId);
 
-    final response = await _client
+    // Get the group data
+    final groupData = await _client
         .from('groups')
-        .select('*, group_members(*)')
+        .select('id, name, description, created_by, created_at')
         .eq('id', groupId)
         .single();
-    return response;
+
+    // Get remaining members separately
+    final membersData = await _client
+        .from('group_members')
+        .select(
+            'id, user_id, role, created_at, user:profiles(id, full_name, email)')
+        .eq('group_id', groupId);
+
+    // Combine data
+    groupData['group_members'] = membersData;
+
+    return groupData;
   }
 
   // Expense methods
