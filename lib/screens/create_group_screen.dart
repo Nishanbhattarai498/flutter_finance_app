@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
@@ -42,7 +41,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         'created_at': DateTime.now().toIso8601String(),
       };
 
-      final success = await context.read<GroupProvider>().createGroup(groupData);
+      final success =
+          await context.read<GroupProvider>().createGroup(groupData);
 
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -117,14 +117,13 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             ),
             const SizedBox(height: 24),
             CustomButton(
+              text: 'Create Group',
               onPressed: _isLoading ? null : _createGroup,
-              child: _isLoading
-                  ? const CircularProgressIndicator()
-                  : const Text('Create Group'),
+              isLoading: _isLoading,
             ),
           ],
         ),
       ),
     );
   }
-} 
+}
