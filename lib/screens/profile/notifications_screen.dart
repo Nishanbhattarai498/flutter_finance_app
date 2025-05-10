@@ -7,7 +7,23 @@ class NotificationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Notifications')),
-      body: const Center(child: Text('Notifications Screen')),
+      body: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: const [
+          ListTile(
+            leading: Icon(Icons.group_add_outlined),
+            title: Text('Added to Group'),
+            subtitle: Text('You have been added to a group by your friend.'),
+          ),
+          Divider(),
+          ListTile(
+            leading: Icon(Icons.notifications_active_outlined),
+            title: Text('Other Notifications'),
+            subtitle:
+                Text('You will see group and expense notifications here.'),
+          ),
+        ],
+      ),
     );
   }
 }
