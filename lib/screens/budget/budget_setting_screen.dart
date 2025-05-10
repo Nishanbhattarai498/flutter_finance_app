@@ -72,7 +72,7 @@ class _BudgetSettingScreenState extends State<BudgetSettingScreen> {
     final currentBudget = budgetProvider.currentBudget;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Set Monthly Budget')),
+      appBar: AppBar(title: const Text('Monthly Budget')),
       body: SafeArea(
         child: Form(
           key: _formKey,
@@ -89,7 +89,10 @@ class _BudgetSettingScreenState extends State<BudgetSettingScreen> {
                     children: [
                       Text(
                         'Budget for ${currentBudget?.monthName ?? ''} ${currentBudget?.year ?? DateTime.now().year}',
-                        style: Theme.of(context).textTheme.titleMedium,
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                       const SizedBox(height: 8),
                       if (currentBudget != null)

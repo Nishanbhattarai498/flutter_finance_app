@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
 import 'package:flutter_finance_app/providers/budget_provider.dart';
 import 'package:flutter_finance_app/providers/expense_provider.dart';
+import 'package:flutter_finance_app/providers/friends_provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
 import 'package:flutter_finance_app/providers/settlement_provider.dart';
 import 'package:flutter_finance_app/screens/auth/login_screen.dart';
@@ -30,7 +31,6 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   final supabaseService = SupabaseService();
   final cacheManager = CacheManager(prefs);
-
   runApp(
     MultiProvider(
       providers: [
@@ -46,6 +46,9 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => BudgetProvider(supabaseService),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => FriendsProvider(),
         ),
       ],
       child: const MyApp(),

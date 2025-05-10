@@ -17,10 +17,15 @@ class _GroupsScreenState extends State<GroupsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadGroups();
+    // Fetch data after the initial build phase to prevent setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadGroups();
+    });
   }
 
   Future<void> _loadGroups() async {
+    if (!mounted) return;
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final userId = authProvider.userId;
 

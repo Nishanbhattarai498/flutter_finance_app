@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_finance_app/providers/auth_provider.dart';
+import 'package:flutter_finance_app/models/friend.dart';
+import 'package:flutter_finance_app/providers/friends_provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
 import 'package:flutter_finance_app/screens/groups/group_details_screen.dart';
 import 'package:flutter_finance_app/widgets/custom_button.dart';
@@ -17,203 +18,237 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _searchController = TextEditingController();
-  List<String> selectedFriends = [];
-  List<Map<String, dynamic>> searchResults = [];
+  List<String> selectedFriendIds = [];
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFriends();
+  }
+
+  Future<void> _loadFriends() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Load friends if not already loaded
+      await Provider.of<FriendsProvider>(context, listen: false)
+          .fetchFriendsList();
+    } catch (e) {
+      // Error handled in the provider
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
-    _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _searchFriends(String query) async {
-    if (query.isEmpty) {
-      setState(() => searchResults = []);
-      return;
-    }
-
-    try {
-      final results = await Provider.of<AuthProvider>(
-        context,
-        listen: false,
-      ).searchUsers(query);
-      setState(() => searchResults = results);
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to search users: $e')));
-    }
-  }
-
-  void _toggleFriendSelection(String userId) {
+  void _toggleFriendSelection(String friendId) {
     setState(() {
-      if (selectedFriends.contains(userId)) {
-        selectedFriends.remove(userId);
+      if (selectedFriendIds.contains(friendId)) {
+        selectedFriendIds.remove(friendId);
       } else {
-        selectedFriends.add(userId);
+        selectedFriendIds.add(friendId);
       }
     });
   }
 
   Future<void> _createGroup() async {
-    if (_formKey.currentState!.validate()) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (selectedFriendIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select at least one friend')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
       final groupProvider = Provider.of<GroupProvider>(context, listen: false);
 
-      if (authProvider.userId == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('User not authenticated')));
-        return;
-      }
+      // Add the user IDs to the group data
       final groupData = {
         'name': _nameController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'created_by': authProvider.userId,
-        'created_at': DateTime.now().toIso8601String(),
-        'members': selectedFriends, // Add the selected friends as members
+        'members': [
+          ...selectedFriendIds,
+        ],
       };
 
-      final success = await groupProvider.createGroup(groupData);
-
-      if (!mounted) return;
-
-      if (success) {
+      final isSuccess = await groupProvider.createGroup(groupData);
+      if (isSuccess && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Group created successfully')),
-        );
-
+        ); // Navigate to group details
         await groupProvider.fetchUserGroups();
-        final createdGroup = groupProvider.groups.firstWhere(
-          (group) => group.name == groupData['name'],
-        );
-
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => GroupDetailsScreen(group: createdGroup),
-          ),
-        );
-      } else {
+        if (groupProvider.groups.isNotEmpty) {
+          final createdGroup = groupProvider.groups.first;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => GroupDetailsScreen(group: createdGroup),
+            ),
+          );
+        } else {
+          Navigator.pop(context);
+        }
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(groupProvider.errorMessage),
-          ),
+              content: Text(
+                  'Failed to create group: ${groupProvider.errorMessage}')),
         );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final groupProvider = Provider.of<GroupProvider>(context);
+    final friendsProvider = Provider.of<FriendsProvider>(context);
+    final friends = friendsProvider.friends;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Group')),
-      body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(16.0),
-            physics: const AlwaysScrollableScrollPhysics(),
-            children: [
-              CustomTextField(
-                controller: _nameController,
-                label: 'Group Name',
-                hint: 'Enter a name for your group',
-                prefixIcon: Icons.group_outlined,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a group name';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              CustomTextField(
-                controller: _descriptionController,
-                label: 'Description (Optional)',
-                hint: 'Add a description for your group',
-                prefixIcon: Icons.description_outlined,
-                maxLines: 3,
-              ),
-
-              const SizedBox(height: 24),
-
-              // Friend search section
-              Text(
-                'Add Friends to Group',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-
-              CustomTextField(
-                controller: _searchController,
-                label: 'Search Friends',
-                hint: 'Enter name or email',
-                prefixIcon: Icons.search,
-                onChanged: _searchFriends,
-              ),
-
-              // Search results
-              if (searchResults.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Card(
+      appBar: AppBar(
+        title: const Text('Create Group'),
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Form(
+                  key: _formKey,
                   child: Column(
-                    children: searchResults.map((user) {
-                      final userId = user['id'];
-                      final isSelected = selectedFriends.contains(userId);
-                      return ListTile(
-                        leading: CircleAvatar(
-                          child: Text(user['email'][0].toUpperCase()),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CustomTextField(
+                        controller: _nameController,
+                        label: 'Group Name',
+                        hint: 'Enter a name for your group',
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a group name';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _descriptionController,
+                        label: 'Description (Optional)',
+                        hint: 'Enter a description for your group',
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Select Friends',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      if (friends.isEmpty)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 24.0),
+                            child: Column(
+                              children: [
+                                const Icon(
+                                  Icons.people_outline,
+                                  size: 48,
+                                  color: Colors.grey,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'You have no friends yet',
+                                  style: Theme.of(context).textTheme.titleSmall,
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Add friends in the Friends tab before creating a group',
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                OutlinedButton(
+                                  onPressed: () {
+                                    // Navigate to Friends tab
+                                    Navigator.pop(context);
+                                    // Set the Friends tab index (2) in the bottom navigation
+                                    // This will be handled by the parent widget
+                                  },
+                                  child: const Text('Go to Friends'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        Expanded(
+                          child: ListView.builder(
+                            itemCount: friends.length,
+                            itemBuilder: (context, index) {
+                              final friend = friends[index];
+                              final isSelected =
+                                  selectedFriendIds.contains(friend.id);
+
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor:
+                                      Theme.of(context).primaryColor,
+                                  backgroundImage: friend.avatarUrl != null
+                                      ? NetworkImage(friend.avatarUrl!)
+                                      : null,
+                                  child: friend.avatarUrl == null
+                                      ? Text(friend.fullName[0].toUpperCase())
+                                      : null,
+                                ),
+                                title: Text(friend.fullName),
+                                subtitle: Text(friend.email),
+                                trailing: Checkbox(
+                                  value: isSelected,
+                                  onChanged: (_) =>
+                                      _toggleFriendSelection(friend.id),
+                                ),
+                                onTap: () => _toggleFriendSelection(friend.id),
+                              );
+                            },
+                          ),
                         ),
-                        title: Text(user['email']),
-                        trailing: Icon(
-                          isSelected
-                              ? Icons.check_circle
-                              : Icons.check_circle_outline,
-                          color: isSelected ? Colors.green : Colors.grey,
-                        ),
-                        onTap: () => _toggleFriendSelection(userId),
-                      );
-                    }).toList(),
+                      const SizedBox(height: 24),
+                      CustomButton(
+                        text: 'Create Group',
+                        onPressed: _createGroup,
+                        isLoading: _isLoading,
+                        fullWidth: true,
+                      ),
+                    ],
                   ),
                 ),
-              ],
-
-              // Selected friends chips
-              if (selectedFriends.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 8,
-                  children: selectedFriends.map((userId) {
-                    final user = searchResults.firstWhere(
-                      (user) => user['id'] == userId,
-                    );
-                    return Chip(
-                      label: Text(user['email']),
-                      onDeleted: () => _toggleFriendSelection(userId),
-                    );
-                  }).toList(),
-                ),
-              ],
-              const SizedBox(height: 32),
-
-              Padding(
-                padding: const EdgeInsets.only(bottom: 24.0),
-                child: CustomButton(
-                  text: 'Create Group',
-                  isLoading: groupProvider.isLoading,
-                  onPressed: _createGroup,
-                ),
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 }

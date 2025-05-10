@@ -3,6 +3,7 @@ import 'package:flutter_finance_app/models/expense.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
 import 'package:flutter_finance_app/providers/budget_provider.dart';
 import 'package:flutter_finance_app/providers/expense_provider.dart';
+import 'package:flutter_finance_app/providers/friends_provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
 import 'package:flutter_finance_app/providers/settlement_provider.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/balance_card.dart';
@@ -10,7 +11,9 @@ import 'package:flutter_finance_app/screens/dashboard/widgets/budget_card.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/expense_chart.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/recent_expenses.dart';
 import 'package:flutter_finance_app/screens/expenses/add_expense_screen.dart';
+import 'package:flutter_finance_app/screens/friends/friends_screen.dart';
 import 'package:flutter_finance_app/screens/groups/groups_screen.dart';
+import 'package:flutter_finance_app/screens/notifications/notifications_screen.dart';
 import 'package:flutter_finance_app/screens/profile/profile_screen.dart';
 import 'package:flutter_finance_app/screens/settlements/settlements_screen.dart';
 import 'package:provider/provider.dart';
@@ -30,6 +33,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   final List<Widget> _pages = const [
     _DashboardHomePage(),
     GroupsScreen(),
+    FriendsScreen(),
     SettlementsScreen(),
     ProfileScreen(),
   ];
@@ -70,23 +74,28 @@ class _DashboardScreenState extends State<DashboardScreen>
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: _onTabChanged,
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
             selectedIcon: Icon(Icons.dashboard),
             label: 'Dashboard',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.group_outlined),
             selectedIcon: Icon(Icons.group),
             label: 'Groups',
           ),
-          NavigationDestination(
+          const NavigationDestination(
+            icon: Icon(Icons.people_outlined),
+            selectedIcon: Icon(Icons.people),
+            label: 'Friends',
+          ),
+          const NavigationDestination(
             icon: Icon(Icons.swap_horiz_outlined),
             selectedIcon: Icon(Icons.swap_horiz),
             label: 'Settlements',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person),
             label: 'Profile',
@@ -149,7 +158,6 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
       if (userId == null) {
         throw Exception('User not authenticated');
       }
-
       await Future.wait([
         Provider.of<ExpenseProvider>(context, listen: false)
             .fetchUserExpenses(userId),
@@ -158,6 +166,7 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
             .fetchUserSettlements(),
         Provider.of<BudgetProvider>(context, listen: false)
             .fetchCurrentBudget(),
+        Provider.of<FriendsProvider>(context, listen: false).loadFriendsData(),
       ]);
     } catch (e) {
       if (!mounted) return;
@@ -250,10 +259,52 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
         ],
       ),
       actions: [
-        IconButton(
-          icon: const Icon(Icons.notifications_outlined),
-          onPressed: () {
-            // TODO: Implement notifications
+        // Notifications icon with badge
+        Consumer<FriendsProvider>(
+          builder: (context, friendsProvider, _) {
+            final unreadCount = friendsProvider.unreadNotificationsCount +
+                friendsProvider.friendRequests.length;
+
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const NotificationsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                if (unreadCount > 0)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        unreadCount > 9 ? '9+' : '$unreadCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            );
           },
         ),
       ],

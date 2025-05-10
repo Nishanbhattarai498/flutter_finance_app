@@ -33,9 +33,18 @@ class BudgetCard extends StatelessWidget {
                     'Monthly Budget',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
-                  Icon(
-                    Icons.account_balance_wallet,
-                    color: Theme.of(context).colorScheme.primary,
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.account_balance_wallet,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${currentBudget?.monthName ?? ''} ${currentBudget?.year ?? DateTime.now().year}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -48,10 +57,6 @@ class BudgetCard extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '${currentBudget.monthName} ${currentBudget.year}',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
                     const SizedBox(height: 8),
 
                     // Budget progress bar
@@ -96,22 +101,56 @@ class BudgetCard extends StatelessWidget {
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 8),
 
-                    if (budgetProvider.budgetAmount > 0)
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          '${budgetProvider.budgetUsedPercentage.toStringAsFixed(0)}% used',
-                          style: TextStyle(
-                            color: budgetProvider.remainingBudget >= 0
-                                ? Colors.green
-                                : Colors.red,
-                            fontWeight: FontWeight.bold,
+                    if (budgetProvider.budgetAmount > 0) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Remaining budget display
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Remaining'),
+                              Text(
+                                budgetProvider.formatAmountNPR(
+                                    budgetProvider.remainingBudget),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: budgetProvider.remainingBudget >= 0
+                                      ? Colors.green
+                                      : Colors.red,
+                                ),
+                              ),
+                            ],
+                          ),
+                          // Percentage used
+                          Text(
+                            '${budgetProvider.budgetUsedPercentage.toStringAsFixed(0)}% used',
+                            style: TextStyle(
+                              color: budgetProvider.remainingBudget >= 0
+                                  ? Colors.green
+                                  : Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Warning message when over budget
+                      if (budgetProvider.remainingBudget < 0)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            'You have exceeded your monthly budget!',
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
-                      ),
+                    ],
                   ],
                 ),
               const SizedBox(height: 8),

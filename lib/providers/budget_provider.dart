@@ -48,10 +48,12 @@ class BudgetProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Get the current month's budget data
       final budgetData = await _supabaseService.getCurrentMonthBudget();
       _currentBudget = Budget.fromMap(budgetData);
 
-      await fetchBudgetSummary(_currentBudget!.month, _currentBudget!.year);
+      // Get expense summary for this budget period
+      await fetchBudgetSummary(_currentBudget!.monthString);
 
       _isLoading = false;
       notifyListeners();
@@ -94,7 +96,7 @@ class BudgetProvider extends ChangeNotifier {
       if (_currentBudget != null && _currentBudget!.id == budgetId) {
         _currentBudget = Budget.fromMap(budgetData);
         // Refresh summary with new budget amount
-        await fetchBudgetSummary(_currentBudget!.month, _currentBudget!.year);
+        await fetchBudgetSummary(_currentBudget!.monthString);
       }
 
       // Update the budget in the list if it exists
@@ -114,10 +116,10 @@ class BudgetProvider extends ChangeNotifier {
     }
   }
 
-  // Fetch budget summary for a specific month/year
-  Future<void> fetchBudgetSummary(int month, int year) async {
+  // Fetch budget summary for a specific month
+  Future<void> fetchBudgetSummary(String month) async {
     try {
-      _currentSummary = await _supabaseService.getBudgetSummary(month, year);
+      _currentSummary = await _supabaseService.getBudgetSummary(month);
       notifyListeners();
     } catch (e) {
       _errorMessage = e.toString();
@@ -127,14 +129,34 @@ class BudgetProvider extends ChangeNotifier {
 
   // Set budget for current month
   Future<bool> setCurrentMonthBudget(double amount) async {
-    if (_currentBudget == null) {
-      await fetchCurrentBudget();
-    }
+    _isLoading = true;
+    _errorMessage = '';
+    notifyListeners();
 
-    if (_currentBudget != null) {
-      return await updateBudget(_currentBudget!.id, amount);
-    }
+    try {
+      // If no current budget exists, fetch it first
+      if (_currentBudget == null) {
+        await fetchCurrentBudget();
+      }
 
-    return false;
+      // If we have a current budget, update it
+      if (_currentBudget != null) {
+        final result = await updateBudget(_currentBudget!.id, amount);
+        _isLoading = false;
+        notifyListeners();
+        return result;
+      } else {
+        // This should rarely happen since fetchCurrentBudget creates a budget if none exists
+        _isLoading = false;
+        _errorMessage = 'Could not set budget: No budget record found';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
   }
 }

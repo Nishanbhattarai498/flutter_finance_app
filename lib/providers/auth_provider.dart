@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/services/supabase_service.dart';
+import 'package:flutter_finance_app/utils/cache_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthProvider extends ChangeNotifier {
   String? _userId;
@@ -18,7 +20,7 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
 
       _isAuthenticated = await checkAuthenticationStatus();
-      
+
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -35,6 +37,16 @@ class AuthProvider extends ChangeNotifier {
       if (user != null) {
         _userId = user.id;
         await _fetchUserProfile();
+
+        // Initialize user data (including budget) after checking auth
+        try {
+          final supabaseService = SupabaseService();
+          await _initializeUserData(supabaseService);
+          debugPrint('✅ User data initialized on app startup');
+        } catch (e) {
+          debugPrint('❌ Error initializing user data on startup: $e');
+        }
+
         return true;
       }
 
@@ -43,6 +55,16 @@ class AuthProvider extends ChangeNotifier {
       if (session?.user != null) {
         _userId = session!.user.id;
         await _fetchUserProfile();
+
+        // Initialize user data (including budget) after checking session
+        try {
+          final supabaseService = SupabaseService();
+          await _initializeUserData(supabaseService);
+          debugPrint('✅ User data initialized on session restore');
+        } catch (e) {
+          debugPrint('❌ Error initializing user data on session restore: $e');
+        }
+
         return true;
       }
     } catch (e) {
@@ -71,10 +93,19 @@ class AuthProvider extends ChangeNotifier {
         email: email,
         password: password,
       );
-
       _userId = response.user?.id;
       await _fetchUserProfile();
       _isAuthenticated = true;
+
+      // Initialize user data after login (creates budget if not exists)
+      try {
+        final supabaseService = SupabaseService();
+        await _initializeUserData(supabaseService);
+        debugPrint('✅ User data initialized successfully');
+      } catch (e) {
+        debugPrint('❌ Error initializing user data: $e');
+        // Continue with login even if data initialization fails
+      }
 
       _isLoading = false;
       notifyListeners();
@@ -91,6 +122,26 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
 
       return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  // Initialize user data including creating initial budget
+  Future<void> _initializeUserData(SupabaseService supabaseService) async {
+    if (_userId == null) return;
+
+    // Ensure user has a budget for the current month
+    final now = DateTime.now();
+    final currentMonth = now.month;
+    final currentYear = now.year;
+
+    try {
+      // This will create a budget if none exists
+      await supabaseService.getCurrentMonthBudget();
+      debugPrint(
+          '✅ Budget initialized for month: $currentMonth, year: $currentYear');
+    } catch (e) {
+      debugPrint('❌ Error initializing budget: $e');
+      // Continue even if budget initialization fails
     }
   }
 
@@ -144,7 +195,17 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Get CacheManager instance to clear cache
+      final prefs = await SharedPreferences.getInstance();
+      final cacheManager = CacheManager(prefs);
+
+      // Clear all cached data
+      await cacheManager.clearCache();
+
+      // Sign out from Supabase
       await SupabaseService.signOut();
+
+      // Reset local state
       _userId = null;
       _userProfile = null;
       _isAuthenticated = false;
@@ -156,8 +217,10 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateProfile(Map<String, dynamic> data) async {
-    if (_userId == null) return;
+  Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> data) async {
+    if (_userId == null) {
+      return {'success': false, 'message': 'User not authenticated'};
+    }
 
     _isLoading = true;
     notifyListeners();
@@ -165,12 +228,20 @@ class AuthProvider extends ChangeNotifier {
     try {
       await SupabaseService.updateUserProfile(_userId!, data);
       await _fetchUserProfile();
+
+      _isLoading = false;
+      notifyListeners();
+      return {'success': true, 'message': 'Profile updated successfully'};
     } catch (e) {
       debugPrint('Error updating profile: $e');
-    }
 
-    _isLoading = false;
-    notifyListeners();
+      _isLoading = false;
+      notifyListeners();
+      return {
+        'success': false,
+        'message': 'Failed to update profile: ${e.toString()}'
+      };
+    }
   }
 
   Future<List<Map<String, dynamic>>> searchUsers(String query) async {

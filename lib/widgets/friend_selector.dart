@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_finance_app/models/friend.dart';
+import 'package:flutter_finance_app/providers/friends_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_finance_app/providers/auth_provider.dart';
 
 class FriendSelector extends StatefulWidget {
   final List<String> selectedFriends;
@@ -17,7 +18,6 @@ class FriendSelector extends StatefulWidget {
 }
 
 class _FriendSelectorState extends State<FriendSelector> {
-  List<Map<String, dynamic>> _friends = [];
   bool _loading = false;
   String _search = '';
 
@@ -30,18 +30,42 @@ class _FriendSelectorState extends State<FriendSelector> {
   Future<void> _fetchFriends() async {
     setState(() => _loading = true);
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final results = await authProvider.searchUsers(_search);
-      setState(() => _friends = results);
+      // Load friend data
+      await Provider.of<FriendsProvider>(context, listen: false)
+          .fetchFriendsList();
     } catch (_) {
-      setState(() => _friends = []);
+      // Error handled in provider
     } finally {
       setState(() => _loading = false);
     }
   }
 
+  void _toggleFriend(String friendId) {
+    final selectedFriends = List<String>.from(widget.selectedFriends);
+    if (selectedFriends.contains(friendId)) {
+      selectedFriends.remove(friendId);
+    } else {
+      selectedFriends.add(friendId);
+    }
+    widget.onFriendsSelected(selectedFriends);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final friendsProvider = Provider.of<FriendsProvider>(context);
+    final allFriends = friendsProvider.friends;
+
+    // Filter by search term
+    final filteredFriends = _search.isEmpty
+        ? allFriends
+        : allFriends.where((friend) {
+            final nameMatch =
+                friend.fullName.toLowerCase().contains(_search.toLowerCase());
+            final emailMatch =
+                friend.email.toLowerCase().contains(_search.toLowerCase());
+            return nameMatch || emailMatch;
+          }).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -51,53 +75,95 @@ class _FriendSelectorState extends State<FriendSelector> {
             prefixIcon: Icon(Icons.search),
           ),
           onChanged: (value) {
-            setState(() => _search = value);
-            _fetchFriends();
+            setState(() {
+              _search = value;
+            });
           },
         ),
-        const SizedBox(height: 8),
-        if (_loading) const Center(child: CircularProgressIndicator()),
-        if (!_loading)
-          ..._friends.map((user) {
-            final userId = user['id'];
-            final isSelected = widget.selectedFriends.contains(userId);
+        const SizedBox(height: 16),
+        _loading
+            ? const Center(child: CircularProgressIndicator())
+            : filteredFriends.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        allFriends.isEmpty
+                            ? 'You have no friends yet. Add friends in the Friends tab.'
+                            : 'No friends found matching "$_search"',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  )
+                : Column(
+                    children: [
+                      ...filteredFriends.map((friend) {
+                        final isSelected =
+                            widget.selectedFriends.contains(friend.id);
+
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Theme.of(context).primaryColor,
+                            backgroundImage: friend.avatarUrl != null
+                                ? NetworkImage(friend.avatarUrl!)
+                                : null,
+                            child: friend.avatarUrl == null
+                                ? Text(friend.fullName[0].toUpperCase())
+                                : null,
+                          ),
+                          title: Text(friend.fullName),
+                          subtitle: Text(friend.email),
+                          trailing: Checkbox(
+                            value: isSelected,
+                            onChanged: (_) => _toggleFriend(friend.id),
+                          ),
+                          onTap: () => _toggleFriend(friend.id),
+                        );
+                      }).toList(),
+                    ],
+                  ),
+        const SizedBox(height: 16),
+        if (widget.selectedFriends.isNotEmpty) ...[
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Text(
+              'Selected Friends (${widget.selectedFriends.length})',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ),
+          ...widget.selectedFriends.map((friendId) {
+            final friend = allFriends.firstWhere(
+              (f) => f.id == friendId,
+              orElse: () => Friend(
+                id: friendId,
+                friendshipId: 'unknown',
+                fullName: 'Unknown User',
+                email: 'user@example.com',
+                createdAt: DateTime.now(),
+              ),
+            );
+
             return ListTile(
               leading: CircleAvatar(
-                child: Text(user['email']?[0]?.toUpperCase() ?? '?'),
+                backgroundColor: Theme.of(context).primaryColor,
+                backgroundImage: friend.avatarUrl != null
+                    ? NetworkImage(friend.avatarUrl!)
+                    : null,
+                child: friend.avatarUrl == null
+                    ? Text(friend.fullName[0].toUpperCase())
+                    : null,
               ),
-              title: Text(user['email'] ?? ''),
-              trailing: Checkbox(
-                value: isSelected,
-                onChanged: (checked) {
-                  final updated = List<String>.from(widget.selectedFriends);
-                  if (checked == true) {
-                    if (!updated.contains(userId)) updated.add(userId);
-                  } else {
-                    updated.remove(userId);
-                  }
-                  widget.onFriendsSelected(updated);
-                },
+              title: Text(friend.fullName),
+              subtitle: Text(friend.email),
+              trailing: IconButton(
+                icon: const Icon(Icons.remove_circle_outline),
+                onPressed: () => _toggleFriend(friendId),
+                color: Colors.red,
               ),
             );
           }).toList(),
-        if (widget.selectedFriends.isNotEmpty)
-          Wrap(
-            spacing: 8,
-            children: widget.selectedFriends.map((userId) {
-              final user = _friends.firstWhere(
-                (u) => u['id'] == userId,
-                orElse: () => {'email': userId},
-              );
-              return Chip(
-                label: Text(user['email'] ?? userId),
-                onDeleted: () {
-                  final updated = List<String>.from(widget.selectedFriends);
-                  updated.remove(userId);
-                  widget.onFriendsSelected(updated);
-                },
-              );
-            }).toList(),
-          ),
+        ],
       ],
     );
   }

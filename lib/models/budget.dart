@@ -1,10 +1,12 @@
+import 'package:intl/intl.dart';
+
 class Budget {
   final String id;
   final String userId;
   final double amount;
   final String currency;
-  final int month;
-  final int year;
+  final int month; // Month (1-12)
+  final int year; // Year (e.g., 2025)
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -21,7 +23,7 @@ class Budget {
 
   factory Budget.fromMap(Map<String, dynamic> map) {
     return Budget(
-      id: map['id'],
+      id: map['id'].toString(),
       userId: map['user_id'],
       amount: (map['amount'] is int)
           ? (map['amount'] as int).toDouble()
@@ -49,21 +51,13 @@ class Budget {
 
   // Get human-readable month name
   String get monthName {
-    final months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December'
-    ];
-    return months[month - 1]; // month is 1-based
+    final date = DateTime(year, month);
+    return DateFormat('MMMM yyyy').format(date);
+  }
+
+  // Get YYYY-MM format string for month
+  String get monthString {
+    return '$year-${month.toString().padLeft(2, '0')}';
   }
 
   Budget copyWith({

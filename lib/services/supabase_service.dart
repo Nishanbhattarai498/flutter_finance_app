@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
 
 class SupabaseService {
   static late final SupabaseClient _client;
@@ -114,12 +115,246 @@ class SupabaseService {
   }
 
   static Future<List<Map<String, dynamic>>> searchUsers(String query) async {
-    final response = await _client
-        .from('profiles')
-        .select()
-        .ilike('full_name', '%$query%')
-        .limit(10);
-    return List<Map<String, dynamic>>.from(response);
+    try {
+      if (query.isEmpty) {
+        return [];
+      }
+
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) {
+        throw 'User not authenticated';
+      }
+
+      // Search for users that match the query
+      final response = await _client
+          .from('profiles')
+          .select('id, full_name, email, avatar_url')
+          .not('id', 'eq', userId) // Exclude current user
+          .or('full_name.ilike.%${query}%,email.ilike.%${query}%')
+          .limit(10);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      throw 'Failed to search users: $e';
+    }
+  }
+
+  // Friend management methods
+  static Future<List<Map<String, dynamic>>> getFriendsList() async {
+    try {
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) {
+        throw 'User not authenticated';
+      }
+
+      // Get friends where current user is either user_id or friend_id
+      final response = await _client
+          .from('friends')
+          .select('''
+            id, 
+            status, 
+            created_at,
+            user_id, 
+            user:user_id(id, full_name, email, avatar_url),
+            friend:friend_id(id, full_name, email, avatar_url)
+          ''')
+          .or('user_id.eq.${userId},friend_id.eq.${userId}')
+          .eq('status', 'accepted');
+
+      // Transform the data to have a consistent format
+      return response.map<Map<String, dynamic>>((friendship) {
+        // Check if current user is user_id or friend_id to determine which profile to show
+        final bool isUserIdCurrentUser = friendship['user_id'] == userId;
+        final Map<String, dynamic> friendProfile =
+            isUserIdCurrentUser ? friendship['friend'] : friendship['user'];
+
+        return {
+          'friendship_id': friendship['id'],
+          'status': friendship['status'],
+          'created_at': friendship['created_at'],
+          'friend_id': friendProfile['id'],
+          'full_name': friendProfile['full_name'],
+          'email': friendProfile['email'],
+          'avatar_url': friendProfile['avatar_url'],
+        };
+      }).toList();
+    } catch (e) {
+      throw 'Failed to get friends list: $e';
+    }
+  }
+
+  // Get pending friend requests
+  static Future<List<Map<String, dynamic>>> getPendingFriendRequests() async {
+    try {
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) {
+        throw 'User not authenticated';
+      }
+
+      // Get pending friend requests where current user is the receiver (friend_id)
+      final response = await _client.from('friends').select('''
+            id, 
+            status, 
+            created_at,
+            user:user_id(id, full_name, email, avatar_url)
+          ''').eq('friend_id', userId).eq('status', 'pending');
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      throw 'Failed to get pending friend requests: $e';
+    }
+  }
+
+  // Send a friend request
+  static Future<Map<String, dynamic>> sendFriendRequest(String friendId) async {
+    try {
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) {
+        throw 'User not authenticated';
+      }
+
+      // Check if a request already exists
+      final existingRequest = await _client
+          .from('friends')
+          .select()
+          .or('and(user_id.eq.${userId},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${userId})')
+          .maybeSingle();
+
+      if (existingRequest != null) {
+        throw 'A friend request already exists with this user';
+      }
+
+      // Create a new friend request
+      final response = await _client
+          .from('friends')
+          .insert({
+            'user_id': userId,
+            'friend_id': friendId,
+            'status': 'pending',
+          })
+          .select()
+          .single();
+
+      return response;
+    } catch (e) {
+      throw 'Failed to send friend request: $e';
+    }
+  }
+
+  // Respond to a friend request (accept or reject)
+  static Future<Map<String, dynamic>> respondToFriendRequest(
+      String requestId, String action) async {
+    try {
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) {
+        throw 'User not authenticated';
+      }
+
+      if (action != 'accepted' && action != 'rejected') {
+        throw 'Invalid action: must be "accepted" or "rejected"';
+      }
+
+      // Verify this request is for the current user
+      final request = await _client
+          .from('friends')
+          .select()
+          .eq('id', requestId)
+          .eq('friend_id', userId) // Current user must be the receiver
+          .maybeSingle();
+
+      if (request == null) {
+        throw 'Friend request not found or you are not authorized to respond';
+      }
+
+      // Update the friend request status
+      final response = await _client
+          .from('friends')
+          .update({
+            'status': action,
+            'updated_at': DateTime.now().toIso8601String()
+          })
+          .eq('id', requestId)
+          .select()
+          .single();
+
+      return response;
+    } catch (e) {
+      throw 'Failed to respond to friend request: $e';
+    }
+  }
+
+  // Get user's notifications
+  static Future<List<Map<String, dynamic>>> getNotifications() async {
+    try {
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) {
+        throw 'User not authenticated';
+      }
+
+      final response = await _client
+          .from('notifications')
+          .select('''
+            id, 
+            type, 
+            content, 
+            is_read, 
+            created_at,
+            sender:sender_id(id, full_name, avatar_url)
+          ''')
+          .eq('user_id', userId)
+          .order('created_at', ascending: false)
+          .limit(30);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      throw 'Failed to get notifications: $e';
+    }
+  }
+
+  // Mark a notification as read
+  static Future<void> markNotificationAsRead(String notificationId) async {
+    try {
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) {
+        throw 'User not authenticated';
+      }
+
+      await _client
+          .from('notifications')
+          .update(
+              {'is_read': true, 'updated_at': DateTime.now().toIso8601String()})
+          .eq('id', notificationId)
+          .eq('user_id', userId);
+    } catch (e) {
+      throw 'Failed to mark notification as read: $e';
+    }
+  }
+
+  // Delete a friend connection
+  static Future<void> removeFriend(String friendshipId) async {
+    try {
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) {
+        throw 'User not authenticated';
+      }
+
+      // Verify this friendship involves the current user
+      final friendship = await _client
+          .from('friends')
+          .select()
+          .eq('id', friendshipId)
+          .or('user_id.eq.${userId},friend_id.eq.${userId}')
+          .maybeSingle();
+
+      if (friendship == null) {
+        throw 'Friendship not found or you are not authorized to remove it';
+      }
+
+      // Delete the friendship
+      await _client.from('friends').delete().eq('id', friendshipId);
+    } catch (e) {
+      throw 'Failed to remove friend: $e';
+    }
   }
 
   // Group methods
@@ -530,6 +765,7 @@ class SupabaseService {
       final currentMonth = now.month;
       final currentYear = now.year;
 
+      // Try to get the current month's budget or create a new one if it doesn't exist
       final response = await _client
           .from('budgets')
           .select()
@@ -539,7 +775,7 @@ class SupabaseService {
           .maybeSingle();
 
       if (response == null) {
-        // Create default budget for current month if it doesn't exist
+        // Create a default budget for current month
         final newBudget = {
           'user_id': userId,
           'amount': 0.0,
@@ -590,12 +826,17 @@ class SupabaseService {
     }
   }
 
-  Future<Map<String, dynamic>> getBudgetSummary(int month, int year) async {
+  Future<Map<String, dynamic>> getBudgetSummary(String monthString) async {
     try {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) {
         throw 'User not authenticated';
       }
+
+      // Parse the YYYY-MM string to get year and month
+      final parts = monthString.split('-');
+      final year = int.parse(parts[0]);
+      final month = int.parse(parts[1]);
 
       // Get budget for the specified month
       final budgetResponse = await _client
@@ -606,14 +847,16 @@ class SupabaseService {
           .eq('year', year)
           .maybeSingle();
 
-      // Calculate total expenses for the month
+      // Calculate start and end dates for the month
       final startDate = DateTime(year, month, 1);
       final endDate = DateTime(year, month + 1, 0); // Last day of month
 
+      // Calculate total expenses for the month using the transactions table
       final expensesResponse = await _client
-          .from('expenses')
+          .from('transactions')
           .select('amount')
           .eq('user_id', userId)
+          .eq('type', 'expense')
           .gte('date', startDate.toIso8601String())
           .lte('date', endDate.toIso8601String());
 
@@ -622,13 +865,34 @@ class SupabaseService {
         totalExpenses += (expense['amount'] as num).toDouble();
       }
 
+      // If no budget exists for this month, create one
+      Map<String, dynamic> budgetData;
+      if (budgetResponse == null) {
+        final newBudget = {
+          'user_id': userId,
+          'amount': 0.0,
+          'currency': 'NPR',
+          'month': month,
+          'year': year,
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        };
+
+        try {
+          budgetData = await createBudget(newBudget);
+        } catch (e) {
+          print('Error creating budget in getBudgetSummary: $e');
+          budgetData = {'amount': 0.0};
+        }
+      } else {
+        budgetData = budgetResponse;
+      }
+
       // Return a summary
       return {
-        'budget': budgetResponse ?? {'amount': 0.0},
+        'budget': budgetData,
         'totalExpenses': totalExpenses,
-        'remaining': budgetResponse != null
-            ? (budgetResponse['amount'] as num).toDouble() - totalExpenses
-            : -totalExpenses
+        'remaining': (budgetData['amount'] as num).toDouble() - totalExpenses
       };
     } catch (e) {
       print('Error getting budget summary: $e');

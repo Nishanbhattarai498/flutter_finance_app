@@ -26,7 +26,7 @@ class ExpenseChart extends StatelessWidget {
               getTooltipItem: (group, groupIndex, rod, rodIndex) {
                 return BarTooltipItem(
                   '${DateFormat('MMM').format(expenseData[groupIndex]['date'])}\n'
-                  '${NumberFormat.currency(symbol: 'NPR ').format(rod.toY)}',
+                  '${NumberFormat.currency(symbol: 'NPR ', decimalDigits: 2, locale: 'en_NP').format(rod.toY)}',
                   const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
