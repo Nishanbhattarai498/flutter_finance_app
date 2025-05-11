@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/models/settlement.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
-import 'package:flutter_finance_app/providers/settlement_provider.dart';
+import 'package:flutter_finance_app/providers/fixed_settlement_provider.dart';
 import 'package:flutter_finance_app/screens/settlements/add_settlement_screen.dart';
 import 'package:provider/provider.dart';
 

@@ -263,9 +263,7 @@ class SupabaseService {
 
       if (request == null) {
         throw 'Friend request not found or you are not authorized to respond';
-      }
-
-      // Update the friend request status with debug print statements
+      }      // Update the friend request status with debug print statements
       print('Updating friend request $requestId to status: $action');
 
       final response = await _client

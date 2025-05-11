@@ -3,13 +3,14 @@ import 'package:flutter_finance_app/providers/auth_provider.dart';
 import 'package:flutter_finance_app/screens/auth/login_screen.dart';
 import 'package:flutter_finance_app/widgets/custom_button.dart';
 import 'package:flutter_finance_app/widgets/custom_text_field.dart';
+import 'package:flutter_finance_app/widgets/logo_widget.dart';
 import 'package:provider/provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
 
   @override
-  _RegisterScreenState createState() => _RegisterScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
@@ -80,7 +81,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Hero(tag: 'logo', child: FlutterLogo(size: 64)),
+                  const LogoWidget(
+                    width: 100,
+                    height: 100,
+                    heroTag: 'logo',
+                  ),
                   const SizedBox(height: 24),
                   Text(
                     'Create an Account',

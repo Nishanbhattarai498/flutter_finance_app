@@ -14,6 +14,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Preload assets to avoid loading issues
+  try {
+    // We'll preload assets later in the app lifecycle when we have a BuildContext
+    print('✅ Ready to load assets');
+  } catch (e) {
+    print('⚠️ Error preloading assets: $e');
+    // Continue anyway, we'll use fallbacks if needed
+  }
+
   // Load Noto fonts for better character support
   await FontLoader.preloadFonts();
 
@@ -51,8 +60,38 @@ void main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    // We'll preload assets in the first frame when we have a context
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _preloadAssets(context);
+    });
+  }
+
+  // Preload assets to ensure they're available
+  Future<void> _preloadAssets(BuildContext context) async {
+    try {
+      // Force the loading of asset manifest
+      await precacheImage(
+        const AssetImage(
+            'assets/images/finance-app-by-nishan-high-resolution-logo.png'),
+        context,
+      );
+      debugPrint('✅ Assets preloaded successfully');
+    } catch (e) {
+      debugPrint('⚠️ Error preloading assets: $e');
+      // Continue anyway, we'll use fallbacks if needed
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -3,7 +3,7 @@ import 'package:flutter_finance_app/models/group.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
 import 'package:flutter_finance_app/providers/friends_provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
-import 'package:flutter_finance_app/providers/settlement_provider.dart';
+import 'package:flutter_finance_app/providers/fixed_settlement_provider.dart';
 import 'package:flutter_finance_app/widgets/custom_button.dart';
 import 'package:flutter_finance_app/widgets/custom_text_field.dart';
 import 'package:flutter_finance_app/widgets/friend_selector.dart';

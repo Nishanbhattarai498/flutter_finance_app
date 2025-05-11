@@ -4,6 +4,7 @@ import 'package:flutter_finance_app/screens/auth/register_screen.dart';
 import 'package:flutter_finance_app/screens/dashboard/dashboard_screen.dart';
 import 'package:flutter_finance_app/widgets/custom_button.dart';
 import 'package:flutter_finance_app/widgets/custom_text_field.dart';
+import 'package:flutter_finance_app/widgets/logo_widget.dart';
 import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -66,7 +67,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Hero(tag: 'logo', child: FlutterLogo(size: 80)),
+                  const LogoWidget(
+                    width: 120,
+                    height: 120,
+                    heroTag: 'logo',
+                  ),
                   const SizedBox(height: 24),
                   Text(
                     'Welcome Back',
