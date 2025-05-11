@@ -1,2 +1,0 @@
-This is a placeholder file. 
-Delete this file when adding actual icon assets to this directory.

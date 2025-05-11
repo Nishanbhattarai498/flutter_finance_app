@@ -1,2 +1,0 @@
-This is a placeholder file. 
-Delete this file when adding actual image assets to this directory.
