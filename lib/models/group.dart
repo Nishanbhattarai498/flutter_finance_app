@@ -22,22 +22,70 @@ class Group {
     required this.members,
     required this.expenses,
   });
-
   factory Group.fromJson(Map<String, dynamic> json) {
-    return Group(
-      id: json['id'],
-      name: json['name'],
-      description: json['description'],
-      createdBy: json['created_by'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
-      members: (json['group_members'] as List?)
-          ?.map((m) => GroupMember.fromJson(m))
-          .toList() ?? [],
-      expenses: (json['expenses'] as List?)
-          ?.map((e) => Expense.fromJson(e))
-          .toList() ?? [],
-    );
+    try {
+      return Group(
+        id: json['id'] as String? ?? 'unknown',
+        name: json['name'] as String? ?? 'Unnamed Group',
+        description: json['description'] as String?,
+        createdBy: json['created_by'] as String? ?? 'unknown',
+        createdAt: json['created_at'] != null
+            ? DateTime.parse(json['created_at'].toString())
+            : DateTime.now(),
+        updatedAt: json['updated_at'] != null
+            ? DateTime.parse(json['updated_at'].toString())
+            : null,
+        members: _parseMembersList(json['group_members']),
+        expenses: _parseExpensesList(json['expenses']),
+      );
+    } catch (e) {
+      print('Error parsing Group: $e with data: $json');
+      // Return a fallback group to prevent app crashes
+      return Group(
+        id: 'error_${DateTime.now().millisecondsSinceEpoch}',
+        name: 'Error Loading Group',
+        createdBy: 'unknown',
+        createdAt: DateTime.now(),
+        members: [],
+        expenses: [],
+      );
+    }
+  }
+
+  // Helper methods to parse lists safely
+  static List<GroupMember> _parseMembersList(dynamic membersData) {
+    if (membersData == null) return [];
+
+    try {
+      if (membersData is List) {
+        return membersData
+            .map((m) =>
+                m is Map<String, dynamic> ? GroupMember.fromJson(m) : null)
+            .whereType<GroupMember>()
+            .toList();
+      }
+    } catch (e) {
+      print('Error parsing group members: $e');
+    }
+
+    return [];
+  }
+
+  static List<Expense> _parseExpensesList(dynamic expensesData) {
+    if (expensesData == null) return [];
+
+    try {
+      if (expensesData is List) {
+        return expensesData
+            .map((e) => e is Map<String, dynamic> ? Expense.fromJson(e) : null)
+            .whereType<Expense>()
+            .toList();
+      }
+    } catch (e) {
+      print('Error parsing group expenses: $e');
+    }
+
+    return [];
   }
 
   Map<String, dynamic> toJson() {

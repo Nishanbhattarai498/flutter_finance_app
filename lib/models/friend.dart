@@ -15,16 +15,30 @@ class Friend {
     this.avatarUrl,
     required this.createdAt,
   });
-
   factory Friend.fromJson(Map<String, dynamic> json) {
-    return Friend(
-      id: json['friend_id'],
-      friendshipId: json['friendship_id'],
-      fullName: json['full_name'],
-      email: json['email'],
-      avatarUrl: json['avatar_url'],
-      createdAt: DateTime.parse(json['created_at']),
-    );
+    try {
+      return Friend(
+        id: json['friend_id'] ?? 'unknown',
+        friendshipId: json['friendship_id'] ?? 'unknown',
+        fullName: json['full_name'] ?? 'Unknown User',
+        email: json['email'] ?? 'no-email',
+        avatarUrl: json['avatar_url'],
+        createdAt: json['created_at'] != null
+            ? DateTime.parse(json['created_at'])
+            : DateTime.now(),
+      );
+    } catch (e) {
+      print('Error parsing Friend: $e');
+      // Return a placeholder object to avoid crashes
+      return Friend(
+        id: 'error',
+        friendshipId: 'error',
+        fullName: 'Error',
+        email: 'error@example.com',
+        avatarUrl: null,
+        createdAt: DateTime.now(),
+      );
+    }
   }
 
   Map<String, dynamic> toJson() {

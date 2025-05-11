@@ -20,20 +20,66 @@ class Budget {
     required this.createdAt,
     required this.updatedAt,
   });
-
   factory Budget.fromMap(Map<String, dynamic> map) {
-    return Budget(
-      id: map['id'].toString(),
-      userId: map['user_id'],
-      amount: (map['amount'] is int)
-          ? (map['amount'] as int).toDouble()
-          : map['amount'],
-      currency: map['currency'] ?? 'NPR',
-      month: map['month'],
-      year: map['year'],
-      createdAt: DateTime.parse(map['created_at']),
-      updatedAt: DateTime.parse(map['updated_at']),
-    );
+    try {
+      // Parse amount with error handling
+      double amount = 0.0;
+      if (map['amount'] != null) {
+        if (map['amount'] is int) {
+          amount = (map['amount'] as int).toDouble();
+        } else if (map['amount'] is double) {
+          amount = map['amount'] as double;
+        } else if (map['amount'] is String) {
+          amount = double.tryParse(map['amount'] as String) ?? 0.0;
+        }
+      }
+
+      // Parse month and year with error handling
+      int month = DateTime.now().month;
+      if (map['month'] != null) {
+        if (map['month'] is int) {
+          month = map['month'] as int;
+        } else if (map['month'] is String) {
+          month = int.tryParse(map['month'] as String) ?? DateTime.now().month;
+        }
+      }
+
+      int year = DateTime.now().year;
+      if (map['year'] != null) {
+        if (map['year'] is int) {
+          year = map['year'] as int;
+        } else if (map['year'] is String) {
+          year = int.tryParse(map['year'] as String) ?? DateTime.now().year;
+        }
+      }
+
+      return Budget(
+        id: map['id']?.toString() ?? 'unknown',
+        userId: map['user_id'] as String? ?? 'unknown',
+        amount: amount,
+        currency: map['currency'] as String? ?? 'NPR',
+        month: month,
+        year: year,
+        createdAt: map['created_at'] != null
+            ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now()
+            : DateTime.now(),
+        updatedAt: map['updated_at'] != null
+            ? DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now()
+            : DateTime.now(),
+      );
+    } catch (e) {
+      print('Error parsing Budget: $e with data: $map');
+      // Return fallback budget
+      return Budget(
+        id: 'error_${DateTime.now().millisecondsSinceEpoch}',
+        userId: 'unknown',
+        amount: 0.0,
+        month: DateTime.now().month,
+        year: DateTime.now().year,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+    }
   }
 
   Map<String, dynamic> toMap() {

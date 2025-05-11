@@ -14,15 +14,36 @@ class GroupMember {
     required this.displayName,
     required this.createdAt,
   });
-
   factory GroupMember.fromJson(Map<String, dynamic> json) {
-    return GroupMember(
-      userId: json['user_id'],
-      groupId: json['group_id'],
-      role: json['role'],
-      displayName: json['display_name'] ?? json['user']['full_name'] ?? 'Unknown User',
-      createdAt: DateTime.parse(json['created_at']),
-    );
+    try {
+      // Get display name from different possible sources
+      String displayName = 'Unknown User';
+      if (json['display_name'] != null) {
+        displayName = json['display_name'] as String;
+      } else if (json['user'] is Map && json['user']['full_name'] != null) {
+        displayName = json['user']['full_name'] as String;
+      }
+
+      return GroupMember(
+        userId: json['user_id'] as String? ?? 'unknown',
+        groupId: json['group_id'] as String? ?? 'unknown',
+        role: json['role'] as String? ?? 'member',
+        displayName: displayName,
+        createdAt: json['created_at'] != null
+            ? DateTime.parse(json['created_at'].toString())
+            : DateTime.now(),
+      );
+    } catch (e) {
+      print('Error parsing GroupMember: $e with data: $json');
+      // Return a fallback group member to prevent app crashes
+      return GroupMember(
+        userId: 'error_${DateTime.now().millisecondsSinceEpoch}',
+        groupId: 'unknown',
+        role: 'member',
+        displayName: 'Error Loading Member',
+        createdAt: DateTime.now(),
+      );
+    }
   }
 
   Map<String, dynamic> toJson() {

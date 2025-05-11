@@ -17,18 +17,46 @@ class NotificationModel {
     required this.createdAt,
     this.sender,
   });
-
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
-    return NotificationModel(
-      id: json['id'],
-      type: json['type'],
-      content: json['content'] is String
-          ? jsonDecode(json['content'])
-          : json['content'],
-      isRead: json['is_read'],
-      createdAt: DateTime.parse(json['created_at']),
-      sender: json['sender'],
-    );
+    try {
+      // Parse content with error handling
+      Map<String, dynamic> content = {};
+      if (json['content'] != null) {
+        if (json['content'] is String) {
+          try {
+            content = jsonDecode(json['content']);
+          } catch (e) {
+            print('Error decoding notification content JSON: $e');
+            content = {'message': 'Notification content error'};
+          }
+        } else if (json['content'] is Map) {
+          content = Map<String, dynamic>.from(json['content']);
+        }
+      }
+
+      return NotificationModel(
+        id: json['id'] as String? ?? 'unknown',
+        type: json['type'] as String? ?? 'unknown',
+        content: content,
+        isRead: json['is_read'] as bool? ?? false,
+        createdAt: json['created_at'] != null
+            ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
+            : DateTime.now(),
+        sender: json['sender'] is Map
+            ? Map<String, dynamic>.from(json['sender'])
+            : null,
+      );
+    } catch (e) {
+      print('Error parsing Notification: $e with data: $json');
+      // Return fallback notification
+      return NotificationModel(
+        id: 'error_${DateTime.now().millisecondsSinceEpoch}',
+        type: 'error',
+        content: {'message': 'Error loading notification'},
+        isRead: false,
+        createdAt: DateTime.now(),
+      );
+    }
   }
 
   Map<String, dynamic> toJson() {

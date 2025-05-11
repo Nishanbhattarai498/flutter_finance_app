@@ -39,25 +39,76 @@ class Expense {
     this.currency = 'NPR',
   });
   factory Expense.fromJson(Map<String, dynamic> json) {
-    return Expense(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      amount: (json['amount'] as num).toDouble(),
-      date: DateTime.parse(json['date'] as String),
-      category: json['category'] as String,
-      description: json['description'] as String?,
-      userId: json['user_id'] as String,
-      groupId: json['group_id'] as String?,
-      isRecurring: json['is_recurring'] as bool? ?? false,
-      recurringFrequency: json['recurring_frequency'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
-      isMonthly: json['is_monthly'] as bool? ?? false,
-      participants: List<String>.from(json['participants'] ?? []),
-      user: json['user'] as Map<String, dynamic>?,
-      group: json['group'] as Map<String, dynamic>?,
-      currency: json['currency'] as String? ?? 'NPR',
-    );
+    try {
+      // Parse amount with error handling
+      double amount = 0.0;
+      if (json['amount'] != null) {
+        if (json['amount'] is num) {
+          amount = (json['amount'] as num).toDouble();
+        } else if (json['amount'] is String) {
+          amount = double.tryParse(json['amount'] as String) ?? 0.0;
+        }
+      }
+
+      // Parse date with error handling
+      DateTime date = DateTime.now();
+      if (json['date'] != null) {
+        try {
+          date = DateTime.parse(json['date'].toString());
+        } catch (e) {
+          print('Error parsing expense date: $e');
+        }
+      }
+
+      // Parse participants list safely
+      List<String> participants = [];
+      if (json['participants'] != null && json['participants'] is List) {
+        participants = (json['participants'] as List)
+            .map((item) => item?.toString() ?? '')
+            .where((item) => item.isNotEmpty)
+            .toList();
+      }
+      return Expense(
+        id: json['id'] as String? ?? 'unknown',
+        title: json['title'] as String? ?? 'Unnamed Expense',
+        amount: amount,
+        date: date,
+        category: json['category'] as String? ?? 'Other',
+        description: json['description'] as String?,
+        userId: json['user_id'] as String? ?? 'unknown',
+        groupId: json['group_id'] as String?,
+        isRecurring: json['is_recurring'] as bool? ?? false,
+        recurringFrequency: json['recurring_frequency'] as String?,
+        createdAt: json['created_at'] != null
+            ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
+            : DateTime.now(),
+        updatedAt: json['updated_at'] != null
+            ? DateTime.tryParse(json['updated_at'].toString()) ?? DateTime.now()
+            : DateTime.now(),
+        isMonthly: json['is_monthly'] as bool? ?? false,
+        participants: participants,
+        user: json['user'] is Map
+            ? Map<String, dynamic>.from(json['user'])
+            : null,
+        group: json['group'] is Map
+            ? Map<String, dynamic>.from(json['group'])
+            : null,
+        currency: json['currency'] as String? ?? 'NPR',
+      );
+    } catch (e) {
+      print('Error parsing Expense: $e with data: $json');
+      // Return fallback expense
+      return Expense(
+        id: 'error_${DateTime.now().millisecondsSinceEpoch}',
+        title: 'Error Loading Expense',
+        amount: 0.0,
+        date: DateTime.now(),
+        category: 'Error',
+        userId: 'unknown',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+    }
   }
   Map<String, dynamic> toJson() {
     return {

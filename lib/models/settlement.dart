@@ -28,22 +28,48 @@ class Settlement {
     this.receiver,
     this.group,
   });
-
   factory Settlement.fromJson(Map<String, dynamic> json) {
-    return Settlement(
-      id: json['id'] as String,
-      amount: (json['amount'] as num).toDouble(),
-      payerId: json['payer_id'] as String,
-      receiverId: json['receiver_id'] as String,
-      groupId: json['group_id'] as String?,
-      status: json['status'] as String,
-      notes: json['notes'],
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at'] as String) : null,
-      payer: json['payer'] as Map<String, dynamic>?,
-      receiver: json['receiver'] as Map<String, dynamic>?,
-      group: json['group'] as Map<String, dynamic>?,
-    );
+    try {
+      return Settlement(
+        id: json['id'] as String? ?? 'unknown',
+        amount: json['amount'] != null
+            ? (json['amount'] is num
+                ? (json['amount'] as num).toDouble()
+                : double.tryParse(json['amount'].toString()) ?? 0.0)
+            : 0.0,
+        payerId: json['payer_id'] as String? ?? 'unknown',
+        receiverId: json['receiver_id'] as String? ?? 'unknown',
+        groupId: json['group_id'] as String?,
+        status: json['status'] as String? ?? 'unknown',
+        notes: json['notes'] as String?,
+        createdAt: json['created_at'] != null
+            ? DateTime.parse(json['created_at'].toString())
+            : DateTime.now(),
+        updatedAt: json['updated_at'] != null
+            ? DateTime.parse(json['updated_at'].toString())
+            : null,
+        payer: json['payer'] is Map
+            ? Map<String, dynamic>.from(json['payer'])
+            : null,
+        receiver: json['receiver'] is Map
+            ? Map<String, dynamic>.from(json['receiver'])
+            : null,
+        group: json['group'] is Map
+            ? Map<String, dynamic>.from(json['group'])
+            : null,
+      );
+    } catch (e) {
+      print('Error parsing Settlement: $e with data: $json');
+      // Return a fallback settlement to prevent app crashes
+      return Settlement(
+        id: 'error_${DateTime.now().millisecondsSinceEpoch}',
+        amount: 0.0,
+        payerId: 'unknown',
+        receiverId: 'unknown',
+        status: 'error',
+        createdAt: DateTime.now(),
+      );
+    }
   }
 
   Map<String, dynamic> toJson() {
