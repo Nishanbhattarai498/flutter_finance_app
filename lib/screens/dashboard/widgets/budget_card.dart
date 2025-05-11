@@ -4,12 +4,26 @@ import 'package:flutter_finance_app/screens/budget/budget_setting_screen.dart';
 import 'package:provider/provider.dart';
 
 class BudgetCard extends StatelessWidget {
-  const BudgetCard({Key? key}) : super(key: key);
+  final double? spent;
+  final double? monthlyRecurring;
 
+  const BudgetCard({
+    Key? key,
+    this.spent,
+    this.monthlyRecurring,
+  }) : super(key: key);
   @override
   Widget build(BuildContext context) {
     final budgetProvider = Provider.of<BudgetProvider>(context);
     final currentBudget = budgetProvider.currentBudget;
+
+    // Use the passed spent value if provided, otherwise use the one from provider
+    final totalExpenses = spent ?? budgetProvider.totalExpenses;
+    final double budgetAmount = budgetProvider.budgetAmount;
+    final double remainingBudget = budgetAmount - totalExpenses;
+    final double budgetUsedPercentage = budgetAmount > 0
+        ? (totalExpenses / budgetAmount * 100).clamp(0.0, 200.0)
+        : 0.0;
 
     return GestureDetector(
       onTap: () {
@@ -57,17 +71,13 @@ class BudgetCard extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 8),
-
-                    // Budget progress bar
+                    const SizedBox(height: 8), // Budget progress bar
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: LinearProgressIndicator(
-                        value: budgetProvider.budgetUsedPercentage / 100,
+                        value: budgetUsedPercentage / 100,
                         backgroundColor: Colors.grey[200],
-                        color: budgetProvider.remainingBudget >= 0
-                            ? Colors.green
-                            : Colors.red,
+                        color: remainingBudget >= 0 ? Colors.green : Colors.red,
                         minHeight: 8,
                       ),
                     ),
@@ -82,8 +92,7 @@ class BudgetCard extends StatelessWidget {
                           children: [
                             const Text('Budget'),
                             Text(
-                              budgetProvider
-                                  .formatAmountNPR(budgetProvider.budgetAmount),
+                              budgetProvider.formatAmountNPR(budgetAmount),
                               style:
                                   const TextStyle(fontWeight: FontWeight.bold),
                             ),
@@ -94,16 +103,14 @@ class BudgetCard extends StatelessWidget {
                           children: [
                             const Text('Spent'),
                             Text(
-                              budgetProvider.formatAmountNPR(
-                                  budgetProvider.totalExpenses),
+                              budgetProvider.formatAmountNPR(totalExpenses),
                             ),
                           ],
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
-
-                    if (budgetProvider.budgetAmount > 0) ...[
+                    if (budgetAmount > 0) ...[
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -113,11 +120,10 @@ class BudgetCard extends StatelessWidget {
                             children: [
                               const Text('Remaining'),
                               Text(
-                                budgetProvider.formatAmountNPR(
-                                    budgetProvider.remainingBudget),
+                                budgetProvider.formatAmountNPR(remainingBudget),
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: budgetProvider.remainingBudget >= 0
+                                  color: remainingBudget >= 0
                                       ? Colors.green
                                       : Colors.red,
                                 ),
@@ -126,19 +132,17 @@ class BudgetCard extends StatelessWidget {
                           ),
                           // Percentage used
                           Text(
-                            '${budgetProvider.budgetUsedPercentage.toStringAsFixed(0)}% used',
+                            '${budgetUsedPercentage.toStringAsFixed(0)}% used',
                             style: TextStyle(
-                              color: budgetProvider.remainingBudget >= 0
+                              color: remainingBudget >= 0
                                   ? Colors.green
                                   : Colors.red,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],
-                      ),
-
-                      // Warning message when over budget
-                      if (budgetProvider.remainingBudget < 0)
+                      ), // Warning message when over budget
+                      if (remainingBudget < 0)
                         Padding(
                           padding: const EdgeInsets.only(top: 8.0),
                           child: Text(

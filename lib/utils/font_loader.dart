@@ -27,4 +27,9 @@ class FontLoader {
   static TextTheme createNotoSansTextTheme(TextTheme base) {
     return GoogleFonts.notoSansTextTheme(base);
   }
+
+  /// Alias for createNotoSansTextTheme for more consistent naming
+  static TextTheme applyNotoSansToTextTheme(TextTheme base) {
+    return createNotoSansTextTheme(base);
+  }
 }

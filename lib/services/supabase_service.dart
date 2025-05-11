@@ -263,7 +263,7 @@ class SupabaseService {
 
       if (request == null) {
         throw 'Friend request not found or you are not authorized to respond';
-      }      // Update the friend request status with debug print statements
+      } // Update the friend request status with debug print statements
       print('Updating friend request $requestId to status: $action');
 
       final response = await _client
@@ -629,10 +629,20 @@ class SupabaseService {
 
   // Expense methods
   static Future<List<Map<String, dynamic>>> getUserExpenses() async {
+    // Get the current user ID
+    final user = await _client.auth.currentUser;
+
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    // Fetch only expenses created by the current user or where they are a participant
     final response = await _client
         .from('expenses')
-        .select()
+        .select('*, participants:expense_participants(user_id)')
+        .or('user_id.eq.${user.id},participants.user_id.eq.${user.id}')
         .order('created_at', ascending: false);
+
     return List<Map<String, dynamic>>.from(response);
   }
 

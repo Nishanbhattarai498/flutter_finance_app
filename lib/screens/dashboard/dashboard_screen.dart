@@ -6,7 +6,6 @@ import 'package:flutter_finance_app/providers/expense_provider.dart';
 import 'package:flutter_finance_app/providers/friends_provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
 import 'package:flutter_finance_app/providers/fixed_settlement_provider.dart';
-import 'package:flutter_finance_app/screens/dashboard/widgets/balance_card.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/budget_card.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/expense_chart.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/recent_expenses.dart';
@@ -186,7 +185,6 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final expenseProvider = Provider.of<ExpenseProvider>(context);
-    final budgetProvider = Provider.of<BudgetProvider>(context);
 
     final String fullName = authProvider.userProfile?['full_name'] ?? 'User';
     final double currentMonthTotal = expenseProvider.getCurrentMonthTotal();
@@ -215,13 +213,10 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                BalanceCard(
+                                BudgetCard(
                                   spent: currentMonthTotal,
-                                  budget: budgetProvider.budgetAmount,
                                   monthlyRecurring: monthlyRecurring,
                                 ),
-                                const SizedBox(height: 16),
-                                const BudgetCard(),
                                 const SizedBox(height: 24),
                                 _buildExpenseTrend(expenseProvider),
                                 const SizedBox(height: 24),
@@ -316,12 +311,12 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Expense Trend',
+          'Current Month Expenses by Category',
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 16),
         ExpenseChart(
-          expenseData: expenseProvider.getMonthlyExpenseTotals(),
+          expenseData: expenseProvider.getCurrentMonthExpensesByCategory(),
         ),
       ],
     );

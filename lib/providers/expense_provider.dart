@@ -163,6 +163,35 @@ class ExpenseProvider with ChangeNotifier {
     return months;
   }
 
+  /// Returns a list of expenses grouped by category for the current month
+  List<Map<String, dynamic>> getCurrentMonthExpensesByCategory() {
+    final now = DateTime.now();
+    final Map<String, double> categoryTotals = {};
+
+    // Filter expenses for the current month
+    final currentMonthExpenses = _expenses.where((expense) {
+      return expense.date.month == now.month && expense.date.year == now.year;
+    }).toList();
+
+    // Group by category
+    for (var expense in currentMonthExpenses) {
+      final category = expense.category;
+      if (categoryTotals.containsKey(category)) {
+        categoryTotals[category] = categoryTotals[category]! + expense.amount;
+      } else {
+        categoryTotals[category] = expense.amount;
+      }
+    }
+
+    // Convert to list of maps
+    return categoryTotals.entries.map((entry) {
+      return {
+        'category': entry.key,
+        'amount': entry.value,
+      };
+    }).toList();
+  }
+
   String formatAmountNPR(double amount) {
     return NumberFormat.currency(symbol: 'NPR ').format(amount);
   }
