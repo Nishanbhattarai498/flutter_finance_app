@@ -37,6 +37,7 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => SettlementProvider(cacheManager),
+          // This import is from fixed_settlement_provider.dart
         ),
         ChangeNotifierProvider(
           create: (_) => BudgetProvider(),

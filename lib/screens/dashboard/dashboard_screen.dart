@@ -5,7 +5,7 @@ import 'package:flutter_finance_app/providers/budget_provider.dart';
 import 'package:flutter_finance_app/providers/expense_provider.dart';
 import 'package:flutter_finance_app/providers/friends_provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
-import 'package:flutter_finance_app/providers/settlement_provider.dart';
+import 'package:flutter_finance_app/providers/fixed_settlement_provider.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/balance_card.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/budget_card.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/expense_chart.dart';

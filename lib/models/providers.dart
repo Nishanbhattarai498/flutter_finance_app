@@ -4,4 +4,5 @@ export 'package:flutter_finance_app/providers/budget_provider.dart';
 export 'package:flutter_finance_app/providers/expense_provider.dart';
 export 'package:flutter_finance_app/providers/friends_provider.dart';
 export 'package:flutter_finance_app/providers/group_provider.dart';
-export 'package:flutter_finance_app/providers/settlement_provider.dart';
+export 'package:flutter_finance_app/providers/fixed_settlement_provider.dart'
+    show SettlementProvider;

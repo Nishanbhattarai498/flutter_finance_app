@@ -86,7 +86,8 @@ class _AddSettlementScreenState extends State<AddSettlementScreen> {
         final settlementProvider =
             Provider.of<SettlementProvider>(context, listen: false);
         final amount = double.parse(_amountController.text);
-        final notes = _notesController.text.trim();        if (_selectedGroup == null) {
+        final notes = _notesController.text.trim();
+        if (_selectedGroup == null) {
           // Personal settlement - just one friend
           if (_selectedFriendId != null) {
             final settlementData = {
@@ -101,7 +102,8 @@ class _AddSettlementScreenState extends State<AddSettlementScreen> {
             };
 
             print('Creating personal settlement: $settlementData');
-            final success = await settlementProvider.createSettlement(settlementData);
+            final success =
+                await settlementProvider.createSettlement(settlementData);
             if (!success) {
               throw settlementProvider.errorMessage;
             }
@@ -121,12 +123,13 @@ class _AddSettlementScreenState extends State<AddSettlementScreen> {
             };
 
             print('Creating group settlement: $settlementData');
-            final success = await settlementProvider.createSettlement(settlementData);
+            final success =
+                await settlementProvider.createSettlement(settlementData);
             if (!success) {
               anyFailure = true;
             }
           }
-          
+
           if (anyFailure) {
             throw 'Some settlements could not be created. Please check your connection and try again.';
           }
