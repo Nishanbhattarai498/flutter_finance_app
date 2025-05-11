@@ -50,11 +50,12 @@ class SettlementProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      print('SettlementProvider: Creating settlement with data: $settlementData');
-      
+      print(
+          'SettlementProvider: Creating settlement with data: $settlementData');
+
       final response = await SupabaseService.createSettlement(settlementData);
       print('SettlementProvider: Settlement creation response: $response');
-      
+
       final newSettlement = Settlement.fromJson(response);
       _settlements.insert(0, newSettlement);
 

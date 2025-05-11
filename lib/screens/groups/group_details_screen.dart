@@ -16,13 +16,21 @@ class GroupDetailsScreen extends StatefulWidget {
   _GroupDetailsScreenState createState() => _GroupDetailsScreenState();
 }
 
-class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
-  int _currentTab = 0;
+class _GroupDetailsScreenState extends State<GroupDetailsScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     _loadGroupDetails();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadGroupDetails() async {
@@ -55,24 +63,18 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
           Container(
             color: Theme.of(context).appBarTheme.backgroundColor,
             child: TabBar(
+              controller: _tabController,
               indicatorColor: Colors.white,
               tabs: const [
                 Tab(text: 'Summary'),
                 Tab(text: 'Members'),
                 Tab(text: 'Expenses'),
               ],
-              onTap: (index) {
-                setState(() {
-                  _currentTab = index;
-                });
-              },
             ),
-          ),
-
-          // Tab content
+          ), // Tab content
           Expanded(
-            child: IndexedStack(
-              index: _currentTab,
+            child: TabBarView(
+              controller: _tabController,
               children: [
                 // Summary tab
                 _buildSummaryTab(context, balances, simplifiedDebts),
