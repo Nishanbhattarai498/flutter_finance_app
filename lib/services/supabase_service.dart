@@ -1,5 +1,4 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:intl/intl.dart';
 
 class SupabaseService {
   static late final SupabaseClient _client;
@@ -266,7 +265,9 @@ class SupabaseService {
         throw 'Friend request not found or you are not authorized to respond';
       }
 
-      // Update the friend request status
+      // Update the friend request status with debug print statements
+      print('Updating friend request $requestId to status: $action');
+
       final response = await _client
           .from('friends')
           .update({
@@ -277,8 +278,13 @@ class SupabaseService {
           .select()
           .single();
 
-      return response;
+      print('Friend request updated successfully: ${response.toString()}');
+
+      // Return a clean Map to avoid JSON formatting issues
+      return Map<String, dynamic>.from(response);
     } catch (e) {
+      print('Friend request response error: $e');
+      // Return an empty map instead of throwing to avoid parsing issues
       throw 'Failed to respond to friend request: $e';
     }
   }
@@ -358,7 +364,7 @@ class SupabaseService {
   }
 
   // Group methods
-  Future<List<Map<String, dynamic>>> getUserGroups() async {
+  static Future<List<Map<String, dynamic>>> getUserGroups() async {
     try {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) {
@@ -451,7 +457,8 @@ class SupabaseService {
     }
   }
 
-  Future<Map<String, dynamic>> createGroup(Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> createGroup(
+      Map<String, dynamic> data) async {
     try {
       // Extract members if they exist and remove from data
       List<String> memberList = [];
@@ -540,7 +547,7 @@ class SupabaseService {
     }
   }
 
-  Future<Map<String, dynamic>> updateGroup(
+  static Future<Map<String, dynamic>> updateGroup(
       String groupId, Map<String, dynamic> data) async {
     // Add created_at if it doesn't exist but don't try to update it
     if (!data.containsKey('created_at')) {
@@ -556,11 +563,11 @@ class SupabaseService {
     return response;
   }
 
-  Future<void> deleteGroup(String groupId) async {
+  static Future<void> deleteGroup(String groupId) async {
     await _client.from('groups').delete().eq('id', groupId);
   }
 
-  Future<Map<String, dynamic>> addGroupMember(
+  static Future<Map<String, dynamic>> addGroupMember(
     String groupId,
     String userId,
     String role,
@@ -592,7 +599,7 @@ class SupabaseService {
     return groupData;
   }
 
-  Future<Map<String, dynamic>> removeGroupMember(
+  static Future<Map<String, dynamic>> removeGroupMember(
     String groupId,
     String userId,
   ) async {
@@ -623,7 +630,7 @@ class SupabaseService {
   }
 
   // Expense methods
-  Future<List<Map<String, dynamic>>> getUserExpenses() async {
+  static Future<List<Map<String, dynamic>>> getUserExpenses() async {
     final response = await _client
         .from('expenses')
         .select()
@@ -631,7 +638,8 @@ class SupabaseService {
     return List<Map<String, dynamic>>.from(response);
   }
 
-  Future<Map<String, dynamic>> createExpense(Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> createExpense(
+      Map<String, dynamic> data) async {
     try {
       print('Creating expense with data: $data'); // Debug log
 
@@ -686,7 +694,7 @@ class SupabaseService {
     }
   }
 
-  Future<Map<String, dynamic>> updateExpense(
+  static Future<Map<String, dynamic>> updateExpense(
       String expenseId, Map<String, dynamic> data) async {
     final response = await _client
         .from('expenses')
@@ -697,12 +705,12 @@ class SupabaseService {
     return response;
   }
 
-  Future<void> deleteExpense(String expenseId) async {
+  static Future<void> deleteExpense(String expenseId) async {
     await _client.from('expenses').delete().eq('id', expenseId);
   }
 
   // Settlement methods
-  Future<List<Map<String, dynamic>>> getUserSettlements() async {
+  static Future<List<Map<String, dynamic>>> getUserSettlements() async {
     final response = await _client
         .from('settlements')
         .select()
@@ -710,14 +718,14 @@ class SupabaseService {
     return List<Map<String, dynamic>>.from(response);
   }
 
-  Future<Map<String, dynamic>> createSettlement(
+  static Future<Map<String, dynamic>> createSettlement(
       Map<String, dynamic> data) async {
     final response =
         await _client.from('settlements').insert(data).select().single();
     return response;
   }
 
-  Future<Map<String, dynamic>> updateSettlement(
+  static Future<Map<String, dynamic>> updateSettlement(
       String settlementId, Map<String, dynamic> data) async {
     final response = await _client
         .from('settlements')
@@ -728,12 +736,12 @@ class SupabaseService {
     return response;
   }
 
-  Future<void> deleteSettlement(String settlementId) async {
+  static Future<void> deleteSettlement(String settlementId) async {
     await _client.from('settlements').delete().eq('id', settlementId);
   }
 
   // Budget methods
-  Future<List<Map<String, dynamic>>> getUserBudgets() async {
+  static Future<List<Map<String, dynamic>>> getUserBudgets() async {
     try {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) {
@@ -754,7 +762,7 @@ class SupabaseService {
     }
   }
 
-  Future<Map<String, dynamic>> getCurrentMonthBudget() async {
+  static Future<Map<String, dynamic>> getCurrentMonthBudget() async {
     try {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) {
@@ -796,7 +804,8 @@ class SupabaseService {
     }
   }
 
-  Future<Map<String, dynamic>> createBudget(Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> createBudget(
+      Map<String, dynamic> data) async {
     try {
       final response =
           await _client.from('budgets').insert(data).select().single();
@@ -807,7 +816,7 @@ class SupabaseService {
     }
   }
 
-  Future<Map<String, dynamic>> updateBudget(
+  static Future<Map<String, dynamic>> updateBudget(
       String budgetId, double amount) async {
     try {
       final response = await _client
@@ -826,7 +835,8 @@ class SupabaseService {
     }
   }
 
-  Future<Map<String, dynamic>> getBudgetSummary(String monthString) async {
+  static Future<Map<String, dynamic>> getBudgetSummary(
+      String monthString) async {
     try {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) {

@@ -4,8 +4,6 @@ import 'package:flutter_finance_app/services/supabase_service.dart';
 import 'package:intl/intl.dart';
 
 class BudgetProvider extends ChangeNotifier {
-  final SupabaseService _supabaseService;
-
   bool _isLoading = false;
   String _errorMessage = '';
   Budget? _currentBudget;
@@ -16,7 +14,7 @@ class BudgetProvider extends ChangeNotifier {
     'remaining': 0.0
   };
 
-  BudgetProvider(this._supabaseService);
+  BudgetProvider();
 
   bool get isLoading => _isLoading;
   String get errorMessage => _errorMessage;
@@ -46,10 +44,9 @@ class BudgetProvider extends ChangeNotifier {
     _isLoading = true;
     _errorMessage = '';
     notifyListeners();
-
     try {
       // Get the current month's budget data
-      final budgetData = await _supabaseService.getCurrentMonthBudget();
+      final budgetData = await SupabaseService.getCurrentMonthBudget();
       _currentBudget = Budget.fromMap(budgetData);
 
       // Get expense summary for this budget period
@@ -71,7 +68,7 @@ class BudgetProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final budgetsData = await _supabaseService.getUserBudgets();
+      final budgetsData = await SupabaseService.getUserBudgets();
       _budgets = budgetsData.map((data) => Budget.fromMap(data)).toList();
 
       _isLoading = false;
@@ -90,7 +87,7 @@ class BudgetProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final budgetData = await _supabaseService.updateBudget(budgetId, amount);
+      final budgetData = await SupabaseService.updateBudget(budgetId, amount);
 
       // Update current budget if it's the one being modified
       if (_currentBudget != null && _currentBudget!.id == budgetId) {
@@ -119,7 +116,7 @@ class BudgetProvider extends ChangeNotifier {
   // Fetch budget summary for a specific month
   Future<void> fetchBudgetSummary(String month) async {
     try {
-      _currentSummary = await _supabaseService.getBudgetSummary(month);
+      _currentSummary = await SupabaseService.getBudgetSummary(month);
       notifyListeners();
     } catch (e) {
       _errorMessage = e.toString();

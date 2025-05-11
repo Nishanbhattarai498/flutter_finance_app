@@ -5,13 +5,12 @@ import 'package:flutter_finance_app/utils/cache_manager.dart';
 import 'package:intl/intl.dart';
 
 class ExpenseProvider with ChangeNotifier {
-  final SupabaseService _supabaseService;
   final CacheManager _cacheManager;
   List<Expense> _expenses = [];
   bool _isLoading = false;
   String? _error;
 
-  ExpenseProvider(this._supabaseService, this._cacheManager);
+  ExpenseProvider(this._cacheManager);
 
   List<Expense> get expenses => _expenses;
   bool get isLoading => _isLoading;
@@ -29,11 +28,9 @@ class ExpenseProvider with ChangeNotifier {
       if (cachedExpenses != null) {
         _expenses = cachedExpenses.map((e) => Expense.fromJson(e)).toList();
         notifyListeners();
-      }
-
-      // Check if we need to sync
+      } // Check if we need to sync
       if (await _cacheManager.shouldSync()) {
-        final response = await _supabaseService.getUserExpenses();
+        final response = await SupabaseService.getUserExpenses();
         _expenses = response.map((e) => Expense.fromJson(e)).toList();
         await _cacheManager.cacheExpenses(response);
       }
@@ -51,7 +48,7 @@ class ExpenseProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      final response = await _supabaseService.createExpense(expenseData);
+      final response = await SupabaseService.createExpense(expenseData);
       final newExpense = Expense.fromJson(response);
       _expenses.insert(0, newExpense);
 
@@ -71,13 +68,14 @@ class ExpenseProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> updateExpense(String expenseId, Map<String, dynamic> data) async {
+  Future<bool> updateExpense(
+      String expenseId, Map<String, dynamic> data) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      final response = await _supabaseService.updateExpense(expenseId, data);
+      final response = await SupabaseService.updateExpense(expenseId, data);
       final updatedExpense = Expense.fromJson(response);
       final index = _expenses.indexWhere((e) => e.id == expenseId);
       if (index != -1) {
@@ -109,7 +107,7 @@ class ExpenseProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      await _supabaseService.deleteExpense(expenseId);
+      await SupabaseService.deleteExpense(expenseId);
       _expenses.removeWhere((e) => e.id == expenseId);
 
       // Update cache
@@ -133,14 +131,12 @@ class ExpenseProvider with ChangeNotifier {
     final firstDayOfMonth = DateTime(now.year, now.month, 1);
     final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
 
-    return _expenses
-        .where((expense) {
-          final expenseDate = expense.date;
-          return !expense.isMonthly &&
-              expenseDate.isAfter(firstDayOfMonth) &&
-              expenseDate.isBefore(lastDayOfMonth.add(const Duration(days: 1)));
-        })
-        .fold(0, (sum, expense) => sum + expense.amount);
+    return _expenses.where((expense) {
+      final expenseDate = expense.date;
+      return !expense.isMonthly &&
+          expenseDate.isAfter(firstDayOfMonth) &&
+          expenseDate.isBefore(lastDayOfMonth.add(const Duration(days: 1)));
+    }).fold(0, (sum, expense) => sum + expense.amount);
   }
 
   double getTotalMonthlyRecurring() {
@@ -155,14 +151,12 @@ class ExpenseProvider with ChangeNotifier {
       final date = DateTime(now.year, now.month - index, 1);
       return {
         'date': date,
-        'amount': _expenses
-            .where((expense) {
-              final expenseDate = expense.date;
-              return !expense.isMonthly &&
-                  expenseDate.year == date.year &&
-                  expenseDate.month == date.month;
-            })
-            .fold(0.0, (sum, expense) => sum + expense.amount),
+        'amount': _expenses.where((expense) {
+          final expenseDate = expense.date;
+          return !expense.isMonthly &&
+              expenseDate.year == date.year &&
+              expenseDate.month == date.month;
+        }).fold(0.0, (sum, expense) => sum + expense.amount),
       };
     }).reversed.toList();
 

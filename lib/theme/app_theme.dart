@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_finance_app/utils/font_loader.dart';
 
 class AppTheme {
   // Primary Colors
@@ -25,6 +27,87 @@ class AppTheme {
 
   // Status Colors
   static const Color infoColor = Color(0xFF2196F3);
+
+  // Create the base text theme with Noto Sans for better character support
+  static TextTheme _createTextTheme(Color color) {
+    final baseTheme = TextTheme(
+      displayLarge: TextStyle(
+        fontSize: 32,
+        fontWeight: FontWeight.bold,
+        color: color,
+      ),
+      displayMedium: TextStyle(
+        fontSize: 28,
+        fontWeight: FontWeight.bold,
+        color: color,
+      ),
+      displaySmall: TextStyle(
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+        color: color,
+      ),
+      headlineLarge: TextStyle(
+        fontSize: 22,
+        fontWeight: FontWeight.bold,
+        color: color,
+      ),
+      headlineMedium: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        color: color,
+      ),
+      headlineSmall: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        color: color,
+      ),
+      titleLarge: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: color,
+      ),
+      titleMedium: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w500,
+        color: color,
+      ),
+      titleSmall: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: color,
+      ),
+      bodyLarge: TextStyle(
+        fontSize: 16,
+        color: color,
+      ),
+      bodyMedium: TextStyle(
+        fontSize: 14,
+        color: color,
+      ),
+      bodySmall: TextStyle(
+        fontSize: 12,
+        color: color,
+      ),
+      labelLarge: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: color,
+      ),
+      labelMedium: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        color: color,
+      ),
+      labelSmall: TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.w500,
+        color: color,
+      ),
+    );
+
+    // Apply Noto Sans to the text theme for better character support
+    return GoogleFonts.notoSansTextTheme(baseTheme);
+  }
 
   // Light Theme
   static ThemeData get lightTheme {
@@ -88,41 +171,7 @@ class AppTheme {
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-          color: textColor,
-        ),
-        displayMedium: TextStyle(
-          fontSize: 28,
-          fontWeight: FontWeight.bold,
-          color: textColor,
-        ),
-        displaySmall: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: textColor,
-        ),
-        headlineMedium: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          color: textColor,
-        ),
-        titleLarge: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: textColor,
-        ),
-        bodyLarge: TextStyle(
-          fontSize: 16,
-          color: textColor,
-        ),
-        bodyMedium: TextStyle(
-          fontSize: 14,
-          color: textSecondaryColor,
-        ),
-      ),
+      textTheme: _createTextTheme(textColor),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: textColor,
         contentTextStyle: const TextStyle(color: Colors.white),
@@ -201,41 +250,7 @@ class AppTheme {
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-          color: textColorDark,
-        ),
-        displayMedium: TextStyle(
-          fontSize: 28,
-          fontWeight: FontWeight.bold,
-          color: textColorDark,
-        ),
-        displaySmall: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: textColorDark,
-        ),
-        headlineMedium: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          color: textColorDark,
-        ),
-        titleLarge: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: textColorDark,
-        ),
-        bodyLarge: TextStyle(
-          fontSize: 16,
-          color: textColorDark,
-        ),
-        bodyMedium: TextStyle(
-          fontSize: 14,
-          color: Colors.grey,
-        ),
-      ),
+      textTheme: _createTextTheme(textColorDark),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: textColorDark,
         contentTextStyle: const TextStyle(color: Colors.white),

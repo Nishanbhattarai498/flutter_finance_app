@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/services/supabase_service.dart';
-import 'package:flutter_finance_app/utils/cache_manager.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthProvider extends ChangeNotifier {
   String? _userId;
@@ -27,6 +25,7 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       _isAuthenticated = false;
       notifyListeners();
+      debugPrint('Error during auth check: $e');
     }
   }
 
@@ -40,8 +39,7 @@ class AuthProvider extends ChangeNotifier {
 
         // Initialize user data (including budget) after checking auth
         try {
-          final supabaseService = SupabaseService();
-          await _initializeUserData(supabaseService);
+          await _initializeUserData();
           debugPrint('✅ User data initialized on app startup');
         } catch (e) {
           debugPrint('❌ Error initializing user data on startup: $e');
@@ -58,8 +56,7 @@ class AuthProvider extends ChangeNotifier {
 
         // Initialize user data (including budget) after checking session
         try {
-          final supabaseService = SupabaseService();
-          await _initializeUserData(supabaseService);
+          await _initializeUserData();
           debugPrint('✅ User data initialized on session restore');
         } catch (e) {
           debugPrint('❌ Error initializing user data on session restore: $e');
@@ -99,8 +96,7 @@ class AuthProvider extends ChangeNotifier {
 
       // Initialize user data after login (creates budget if not exists)
       try {
-        final supabaseService = SupabaseService();
-        await _initializeUserData(supabaseService);
+        await _initializeUserData();
         debugPrint('✅ User data initialized successfully');
       } catch (e) {
         debugPrint('❌ Error initializing user data: $e');
@@ -109,39 +105,20 @@ class AuthProvider extends ChangeNotifier {
 
       _isLoading = false;
       notifyListeners();
-
       return {
-        'success': response.user != null,
-        'message': response.user != null
-            ? 'Successfully signed in'
-            : 'Invalid email or password',
+        'success': true,
+        'message': 'Successfully logged in',
       };
     } catch (e) {
       _isLoading = false;
       _isAuthenticated = false;
       notifyListeners();
-
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
-  // Initialize user data including creating initial budget
-  Future<void> _initializeUserData(SupabaseService supabaseService) async {
-    if (_userId == null) return;
-
-    // Ensure user has a budget for the current month
-    final now = DateTime.now();
-    final currentMonth = now.month;
-    final currentYear = now.year;
-
-    try {
-      // This will create a budget if none exists
-      await supabaseService.getCurrentMonthBudget();
-      debugPrint(
-          '✅ Budget initialized for month: $currentMonth, year: $currentYear');
-    } catch (e) {
-      debugPrint('❌ Error initializing budget: $e');
-      // Continue even if budget initialization fails
+      return {
+        'success': false,
+        'message': e.toString().contains('Invalid login credentials')
+            ? 'Invalid email or password'
+            : e.toString(),
+      };
     }
   }
 
@@ -150,28 +127,27 @@ class AuthProvider extends ChangeNotifier {
     String password,
     String fullName,
   ) async {
-    try {
-      _isLoading = true;
-      notifyListeners();
+    _isLoading = true;
+    notifyListeners();
 
+    try {
       final response = await SupabaseService.signUp(
         email: email,
         password: password,
         fullName: fullName,
       );
 
+      _isLoading = false;
+
       if (response.user == null) {
-        _isLoading = false;
         notifyListeners();
         return {
           'success': false,
-          'message': 'Registration failed. Please try again.',
+          'message': 'Failed to create account.',
         };
       }
 
-      _isLoading = false;
       notifyListeners();
-
       return {
         'success': true,
         'message':
@@ -180,41 +156,32 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       _isLoading = false;
       notifyListeners();
-
-      String message = 'An error occurred during registration';
-      if (e.toString().contains('already registered')) {
-        message = 'This email is already registered';
-      }
-
-      return {'success': false, 'message': message};
+      return {
+        'success': false,
+        'message': e.toString(),
+      };
     }
   }
 
   Future<void> signOut() async {
-    _isLoading = true;
-    notifyListeners();
-
     try {
-      // Get CacheManager instance to clear cache
-      final prefs = await SharedPreferences.getInstance();
-      final cacheManager = CacheManager(prefs);
+      _isLoading = true;
+      notifyListeners();
 
-      // Clear all cached data
-      await cacheManager.clearCache();
-
-      // Sign out from Supabase
       await SupabaseService.signOut();
 
       // Reset local state
       _userId = null;
       _userProfile = null;
       _isAuthenticated = false;
+
+      _isLoading = false;
+      notifyListeners();
     } catch (e) {
+      _isLoading = false;
+      notifyListeners();
       debugPrint('Error signing out: $e');
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> data) async {
@@ -227,29 +194,51 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       await SupabaseService.updateUserProfile(_userId!, data);
+
+      // Refresh profile data
       await _fetchUserProfile();
 
       _isLoading = false;
       notifyListeners();
       return {'success': true, 'message': 'Profile updated successfully'};
     } catch (e) {
-      debugPrint('Error updating profile: $e');
-
       _isLoading = false;
       notifyListeners();
-      return {
-        'success': false,
-        'message': 'Failed to update profile: ${e.toString()}'
-      };
+      debugPrint('Error updating profile: $e');
+      return {'success': false, 'message': e.toString()};
     }
   }
 
-  Future<List<Map<String, dynamic>>> searchUsers(String query) async {
+  Future<void> _initializeUserData() async {
+    // Check if current month's budget exists, create one if not
     try {
-      return await SupabaseService.searchUsers(query);
+      await SupabaseService.getCurrentMonthBudget();
+      debugPrint('✅ Budget exists for current month');
     } catch (e) {
-      debugPrint('Error searching users: $e');
-      throw 'Failed to search users: $e';
+      debugPrint('❌ No budget for current month, creating one...');
+      try {
+        // Create a default budget for the current month (0 amount)
+        // User can update it later
+        await SupabaseService.updateBudget('current', 0);
+        debugPrint('✅ Created default budget for current month');
+      } catch (createError) {
+        debugPrint('❌ Failed to create default budget: $createError');
+      }
+    }
+  }
+
+  // Search users by email or name for friend requests
+  Future<List<Map<String, dynamic>>> searchUsers(String query) async {
+    if (_userId == null) return [];
+    if (query.isEmpty) return [];
+
+    try {
+      final searchResults = await SupabaseService.searchUsers(query);
+      // Filter out current user from results
+      return searchResults.where((user) => user['id'] != _userId).toList();
+    } catch (e) {
+      debugPrint('❌ Error searching users: $e');
+      return [];
     }
   }
 }

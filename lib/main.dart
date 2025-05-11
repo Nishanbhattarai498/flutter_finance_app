@@ -1,51 +1,45 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_finance_app/providers/auth_provider.dart';
-import 'package:flutter_finance_app/providers/budget_provider.dart';
-import 'package:flutter_finance_app/providers/expense_provider.dart';
-import 'package:flutter_finance_app/providers/friends_provider.dart';
-import 'package:flutter_finance_app/providers/group_provider.dart';
-import 'package:flutter_finance_app/providers/settlement_provider.dart';
+import 'package:flutter_finance_app/models/providers.dart';
 import 'package:flutter_finance_app/screens/auth/login_screen.dart';
 import 'package:flutter_finance_app/screens/dashboard/dashboard_screen.dart';
 import 'package:flutter_finance_app/services/supabase_service.dart';
 import 'package:flutter_finance_app/theme/app_theme.dart';
 import 'package:flutter_finance_app/utils/cache_manager.dart';
+import 'package:flutter_finance_app/utils/font_loader.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_finance_app/widgets/loading_screen.dart';
-import 'package:flutter_finance_app/widgets/error_screen.dart';
-import 'package:flutter_finance_app/utils/connectivity_manager.dart';
 import 'package:flutter_finance_app/secrets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Load Noto fonts for better character support
+  await FontLoader.preloadFonts();
+
   // Initialize Supabase
   await SupabaseService.initialize(
     supabaseUrl: Secrets.supabaseUrl,
     supabaseAnonKey: Secrets.supabaseAnonKey,
   );
-
   // Initialize SharedPreferences
   final prefs = await SharedPreferences.getInstance();
-  final supabaseService = SupabaseService();
   final cacheManager = CacheManager(prefs);
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(
-          create: (_) => ExpenseProvider(supabaseService, cacheManager),
+          create: (_) => ExpenseProvider(cacheManager),
         ),
         ChangeNotifierProvider(
-          create: (_) => GroupProvider(supabaseService, cacheManager),
+          create: (_) => GroupProvider(cacheManager),
         ),
         ChangeNotifierProvider(
-          create: (_) => SettlementProvider(supabaseService, cacheManager),
+          create: (_) => SettlementProvider(cacheManager),
         ),
         ChangeNotifierProvider(
-          create: (_) => BudgetProvider(supabaseService),
+          create: (_) => BudgetProvider(),
         ),
         ChangeNotifierProvider(
           create: (_) => FriendsProvider(),
@@ -74,7 +68,6 @@ class MyApp extends StatelessWidget {
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({Key? key}) : super(key: key);
-
   @override
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(

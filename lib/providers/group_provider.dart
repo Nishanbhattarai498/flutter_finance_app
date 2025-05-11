@@ -4,13 +4,12 @@ import 'package:flutter_finance_app/services/supabase_service.dart';
 import 'package:flutter_finance_app/utils/cache_manager.dart';
 
 class GroupProvider with ChangeNotifier {
-  final SupabaseService _supabaseService;
   final CacheManager _cacheManager;
   List<Group> _groups = [];
   bool _isLoading = false;
   String? _error;
 
-  GroupProvider(this._supabaseService, this._cacheManager);
+  GroupProvider(this._cacheManager);
 
   List<Group> get groups => _groups;
   bool get isLoading => _isLoading;
@@ -32,7 +31,7 @@ class GroupProvider with ChangeNotifier {
 
       // Check if we need to sync
       if (await _cacheManager.shouldSync()) {
-        final response = await _supabaseService.getUserGroups();
+        final response = await SupabaseService.getUserGroups();
         _groups = response.map((g) => Group.fromJson(g)).toList();
         await _cacheManager.cacheGroups(response);
       }
@@ -50,7 +49,7 @@ class GroupProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      final response = await _supabaseService.createGroup(groupData);
+      final response = await SupabaseService.createGroup(groupData);
       final newGroup = Group.fromJson(response);
       _groups.insert(0, newGroup);
 
@@ -76,7 +75,7 @@ class GroupProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      final response = await _supabaseService.updateGroup(groupId, data);
+      final response = await SupabaseService.updateGroup(groupId, data);
       final updatedGroup = Group.fromJson(response);
       final index = _groups.indexWhere((g) => g.id == groupId);
       if (index != -1) {
@@ -108,7 +107,7 @@ class GroupProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      await _supabaseService.deleteGroup(groupId);
+      await SupabaseService.deleteGroup(groupId);
       _groups.removeWhere((g) => g.id == groupId);
 
       // Update cache
@@ -127,13 +126,15 @@ class GroupProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> addGroupMember(String groupId, String userId, String role) async {
+  Future<bool> addGroupMember(
+      String groupId, String userId, String role) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      final response = await _supabaseService.addGroupMember(groupId, userId, role);
+      final response =
+          await SupabaseService.addGroupMember(groupId, userId, role);
       final updatedGroup = Group.fromJson(response);
       _groups = _groups.map((g) => g.id == groupId ? updatedGroup : g).toList();
 
@@ -162,7 +163,7 @@ class GroupProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      final response = await _supabaseService.removeGroupMember(groupId, userId);
+      final response = await SupabaseService.removeGroupMember(groupId, userId);
       final updatedGroup = Group.fromJson(response);
       _groups = _groups.map((g) => g.id == groupId ? updatedGroup : g).toList();
 
@@ -210,7 +211,8 @@ class GroupProvider with ChangeNotifier {
       // Update owed amount for each participant
       for (final participantId in expense.participants) {
         if (participantId != paidBy) {
-          balances[participantId]!['owed'] = (balances[participantId]!['owed'] ?? 0) + perPerson;
+          balances[participantId]!['owed'] =
+              (balances[participantId]!['owed'] ?? 0) + perPerson;
         }
       }
     }
@@ -247,7 +249,8 @@ class GroupProvider with ChangeNotifier {
       final debtor = debtors.entries.first;
       final creditor = creditors.entries.first;
 
-      final amount = debtor.value < creditor.value ? debtor.value : creditor.value;
+      final amount =
+          debtor.value < creditor.value ? debtor.value : creditor.value;
 
       settlements.add({
         'from': debtor.key,

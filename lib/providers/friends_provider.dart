@@ -112,7 +112,12 @@ class FriendsProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      await SupabaseService.respondToFriendRequest(requestId, 'accepted');
+      try {
+        await SupabaseService.respondToFriendRequest(requestId, 'accepted');
+      } catch (e) {
+        print('Error in respondToFriendRequest: $e');
+        // Continue execution even if there's an error, as we'll refresh the lists
+      }
 
       // Refresh friend requests and friends list
       await fetchFriendRequests();
@@ -136,7 +141,12 @@ class FriendsProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      await SupabaseService.respondToFriendRequest(requestId, 'rejected');
+      try {
+        await SupabaseService.respondToFriendRequest(requestId, 'rejected');
+      } catch (e) {
+        print('Error in respondToFriendRequest: $e');
+        // Continue execution even if there's an error, as we'll refresh the lists
+      }
 
       // Refresh friend requests
       await fetchFriendRequests();
