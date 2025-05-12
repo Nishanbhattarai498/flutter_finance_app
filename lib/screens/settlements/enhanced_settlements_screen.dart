@@ -857,12 +857,11 @@ class _SettlementCard extends StatelessWidget {
     Key? key,
     required this.settlement,
   }) : super(key: key);
-
   String _getUserName(Map<String, dynamic>? userData) {
     if (userData == null) {
       return 'Unknown User';
     }
-    return userData['full_name'] ?? 'Unknown User';
+    return userData['full_name'] ?? userData['email'] ?? 'Unknown User';
   }
 
   String _formatDate(DateTime date) {
@@ -920,11 +919,37 @@ class _SettlementCard extends StatelessWidget {
                         isPayer ? 'You paid' : 'You received',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
+                      Row(
+                        children: [
+                          Text(
+                            isPayer ? 'To: ' : 'From: ',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          Expanded(
+                            child: Text(
+                              isPayer
+                                  ? _getUserName(settlement.receiver)
+                                  : _getUserName(settlement.payer),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(context).primaryColor,
+                                  ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Add explanation of both parties
+                      const SizedBox(height: 4),
                       Text(
-                        isPayer
-                            ? 'To: ${_getUserName(settlement.receiver)}'
-                            : 'From: ${_getUserName(settlement.payer)}',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        'Between: ${_getUserName(settlement.payer)} → ${_getUserName(settlement.receiver)}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey[700],
+                            ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -1061,12 +1086,57 @@ class _SettlementCard extends StatelessWidget {
   }
 
   void _showDeleteConfirmation(BuildContext context, Settlement settlement) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUserId = authProvider.userId;
+    final isPayer = settlement.payerId == currentUserId;
+    final otherPartyName = isPayer
+        ? _getUserName(settlement.receiver)
+        : _getUserName(settlement.payer);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Settlement'),
-        content: const Text(
-          'Are you sure you want to delete this settlement? This action cannot be undone.',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Settlement details
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isPayer
+                        ? 'You paid to: $otherPartyName'
+                        : 'You received from: $otherPartyName',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'NPR ${settlement.amount.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      color: isPayer ? Colors.red : Colors.green,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Settlement between: ${_getUserName(settlement.payer)} → ${_getUserName(settlement.receiver)}',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Are you sure you want to delete this settlement? This action cannot be undone.',
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -1120,6 +1190,13 @@ class _SettlementCard extends StatelessWidget {
         TextEditingController(text: settlement.amount.toString());
     final notesController = TextEditingController(text: settlement.notes ?? '');
 
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUserId = authProvider.userId;
+    final isPayer = settlement.payerId == currentUserId;
+    final otherPartyName = isPayer
+        ? _getUserName(settlement.receiver)
+        : _getUserName(settlement.payer);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1127,6 +1204,31 @@ class _SettlementCard extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Settlement details
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isPayer
+                        ? 'You paid to: $otherPartyName'
+                        : 'You received from: $otherPartyName',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Settlement between: ${_getUserName(settlement.payer)} → ${_getUserName(settlement.receiver)}',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
             TextFormField(
               controller: amountController,
               decoration: const InputDecoration(
