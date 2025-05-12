@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_finance_app/models/settlement.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
 import 'package:flutter_finance_app/services/supabase_service.dart';
+import 'package:flutter_finance_app/services/supabase_service_settlement.dart';
 import 'package:flutter_finance_app/utils/cache_manager.dart';
 
 class SettlementProvider with ChangeNotifier {
@@ -148,10 +149,7 @@ class SettlementProvider with ChangeNotifier {
       notifyListeners();
       final response = await SupabaseService.updateSettlement(
         settlementId,
-        {
-          'status': 'completed', 
-          'updated_at': DateTime.now().toIso8601String()
-        },
+        {'status': 'completed', 'updated_at': DateTime.now().toIso8601String()},
       );
       final updatedSettlement = Settlement.fromJson(response);
       final index = _settlements.indexWhere((s) => s.id == settlementId);
@@ -173,14 +171,14 @@ class SettlementProvider with ChangeNotifier {
       try {
         final currentUserId = _authProvider.userId;
         String otherUserId;
-        
+
         // Determine the other user to notify
         if (updatedSettlement.payerId == currentUserId) {
           otherUserId = updatedSettlement.receiverId;
         } else {
           otherUserId = updatedSettlement.payerId;
         }
-        
+
         // Create notification for the other user
         await SupabaseService.createNotification({
           'user_id': otherUserId,
