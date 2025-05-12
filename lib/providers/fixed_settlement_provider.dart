@@ -1,15 +1,17 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_finance_app/models/settlement.dart';
+import 'package:flutter_finance_app/providers/auth_provider.dart';
 import 'package:flutter_finance_app/services/supabase_service.dart';
 import 'package:flutter_finance_app/utils/cache_manager.dart';
 
 class SettlementProvider with ChangeNotifier {
   final CacheManager _cacheManager;
+  final AuthProvider _authProvider;
   List<Settlement> _settlements = [];
   bool _isLoading = false;
   String? _error;
 
-  SettlementProvider(this._cacheManager);
+  SettlementProvider(this._cacheManager, this._authProvider);
 
   List<Settlement> get settlements => _settlements;
   bool get isLoading => _isLoading;
@@ -146,7 +148,10 @@ class SettlementProvider with ChangeNotifier {
       notifyListeners();
       final response = await SupabaseService.updateSettlement(
         settlementId,
-        {'status': 'paid'},
+        {
+          'status': 'completed', 
+          'updated_at': DateTime.now().toIso8601String()
+        },
       );
       final updatedSettlement = Settlement.fromJson(response);
       final index = _settlements.indexWhere((s) => s.id == settlementId);
@@ -162,6 +167,33 @@ class SettlementProvider with ChangeNotifier {
       if (cacheIndex != -1) {
         cachedSettlements[cacheIndex] = response;
         await _cacheManager.cacheSettlements(cachedSettlements);
+      }
+
+      // Create notification for the other party
+      try {
+        final currentUserId = _authProvider.userId;
+        String otherUserId;
+        
+        // Determine the other user to notify
+        if (updatedSettlement.payerId == currentUserId) {
+          otherUserId = updatedSettlement.receiverId;
+        } else {
+          otherUserId = updatedSettlement.payerId;
+        }
+        
+        // Create notification for the other user
+        await SupabaseService.createNotification({
+          'user_id': otherUserId,
+          'sender_id': currentUserId,
+          'type': 'settlement_paid',
+          'content': 'A settlement has been marked as paid',
+          'is_read': false,
+          'settlement_id': settlementId,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      } catch (e) {
+        print('Error creating settlement paid notification: $e');
+        // Continue even if notification creation fails
       }
 
       _isLoading = false;

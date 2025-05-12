@@ -797,7 +797,6 @@ class SupabaseService {
       throw Exception('Failed to delete expense: $e');
     }
   }
-
   // Settlement methods
   static Future<List<Map<String, dynamic>>> getUserSettlements() async {
     // Get the current user ID
@@ -807,31 +806,60 @@ class SupabaseService {
       throw Exception('User not authenticated');
     }
 
-    // Fetch only settlements for the current user
+    // Fetch settlements where the current user is either the payer or the receiver
     final response = await _client
         .from('settlements')
         .select()
-        .eq('user_id', user.id) // Only get current user's settlements
+        .or('payer_id.eq.${user.id},receiver_id.eq.${user.id}') // Get settlements where user is either payer or receiver
         .order('created_at', ascending: false);
 
     return List<Map<String, dynamic>>.from(response);
   }
-
   static Future<Map<String, dynamic>> createSettlement(
       Map<String, dynamic> data) async {
     final user = await _client.auth.currentUser;
     if (user == null) {
       throw Exception('User not authenticated');
+    }    // Make sure payer_id and receiver_id are set correctly
+    if (!data.containsKey('payer_id') || !data.containsKey('receiver_id')) {
+      throw Exception('Settlement must have payer_id and receiver_id');
     }
 
-    // Ensure the settlement is associated with the current user
-    data['user_id'] = user.id;
-
+    // Insert the settlement
     final response =
         await _client.from('settlements').insert(data).select().single();
+
+    try {
+      // If the current user is NOT the payer, then create a notification for the payer
+      if (user.id != data['payer_id']) {
+        await _client.from('notifications').insert({
+          'user_id': data['payer_id'],
+          'sender_id': user.id,
+          'type': 'settlement',
+          'content': 'You have a new settlement request',
+          'is_read': false,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      }
+
+      // If the current user is NOT the receiver, then create a notification for the receiver
+      if (user.id != data['receiver_id']) {
+        await _client.from('notifications').insert({
+          'user_id': data['receiver_id'],
+          'sender_id': user.id,
+          'type': 'settlement',
+          'content': 'You have a new settlement request',
+          'is_read': false,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      }
+    } catch (e) {
+      print('Error creating settlement notification: $e');
+      // Continue even if notification creation fails
+    }
+
     return response;
   }
-
   static Future<Map<String, dynamic>> updateSettlement(
       String settlementId, Map<String, dynamic> data) async {
     final user = await _client.auth.currentUser;
@@ -839,12 +867,12 @@ class SupabaseService {
       throw Exception('User not authenticated');
     }
 
-    // First, verify this settlement belongs to the current user
+    // First, verify this settlement involves the current user (as payer or receiver)
     final checkResponse = await _client
         .from('settlements')
         .select('id')
         .eq('id', settlementId)
-        .eq('user_id', user.id)
+        .or('payer_id.eq.${user.id},receiver_id.eq.${user.id}')
         .maybeSingle();
 
     if (checkResponse == null) {
@@ -856,25 +884,32 @@ class SupabaseService {
         .from('settlements')
         .update(data)
         .eq('id', settlementId)
-        .eq('user_id', user.id) // Additional safety check
+        .select()
+        .single();
+    return response;
+  }
+          'Settlement not found or you do not have permission to update it');
+    }    final response = await _client
+        .from('settlements')
+        .update(data)
+        .eq('id', settlementId)
         .select()
         .single();
 
     return response;
   }
-
   static Future<void> deleteSettlement(String settlementId) async {
     final user = await _client.auth.currentUser;
     if (user == null) {
       throw Exception('User not authenticated');
     }
 
-    // First, verify this settlement belongs to the current user
+    // First, verify this settlement involves the current user (as payer or receiver)
     final checkResponse = await _client
         .from('settlements')
         .select('id')
         .eq('id', settlementId)
-        .eq('user_id', user.id)
+        .or('payer_id.eq.${user.id},receiver_id.eq.${user.id}')
         .maybeSingle();
 
     if (checkResponse == null) {
@@ -885,8 +920,20 @@ class SupabaseService {
     await _client
         .from('settlements')
         .delete()
-        .eq('id', settlementId)
-        .eq('user_id', user.id); // Additional safety check
+        .eq('id', settlementId);  }
+
+  static Future<void> createNotification(Map<String, dynamic> data) async {
+    final user = await _client.auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    // Make sure required fields are present
+    if (!data.containsKey('user_id') || !data.containsKey('type') || !data.containsKey('content')) {
+      throw Exception('Notification must have user_id, type, and content');
+    }
+
+    await _client.from('notifications').insert(data);
   }
 
   // Budget methods

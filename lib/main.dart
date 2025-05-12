@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_finance_app/models/providers.dart';
+// Import providers directly instead of through the models/providers.dart file
+import 'package:flutter_finance_app/providers/auth_provider.dart';
+import 'package:flutter_finance_app/providers/budget_provider.dart';
+import 'package:flutter_finance_app/providers/expense_provider.dart';
+import 'package:flutter_finance_app/providers/friends_provider.dart';
+import 'package:flutter_finance_app/providers/group_provider.dart';
+import 'package:flutter_finance_app/providers/fixed_settlement_provider.dart'
+    as settlement_provider;
 import 'package:flutter_finance_app/screens/auth/login_screen.dart';
 import 'package:flutter_finance_app/screens/dashboard/dashboard_screen.dart';
 import 'package:flutter_finance_app/services/supabase_service.dart';
@@ -45,7 +52,7 @@ void main() async {
           create: (_) => GroupProvider(cacheManager),
         ),
         ChangeNotifierProvider(
-          create: (_) => SettlementProvider(cacheManager),
+          create: (_) => settlement_provider.SettlementProvider(cacheManager),
           // This import is from fixed_settlement_provider.dart
         ),
         ChangeNotifierProvider(
