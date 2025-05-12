@@ -17,22 +17,47 @@ class ExpenseProvider with ChangeNotifier {
   String? get error => _error;
   String get errorMessage => _error ?? 'An error occurred';
 
+  // Clear all expenses - use before fetching a different user's expenses
+  void clearExpenses() {
+    _expenses = [];
+    notifyListeners();
+  }
+
   Future<void> fetchUserExpenses(String userId) async {
     try {
       _isLoading = true;
       _error = null;
+
+      // Clear any existing expenses to prevent mixing data between users
+      _expenses = [];
       notifyListeners();
 
-      // Try to get cached data first
-      final cachedExpenses = await _cacheManager.getCachedExpenses();
-      if (cachedExpenses != null) {
-        _expenses = cachedExpenses.map((e) => Expense.fromJson(e)).toList();
-        notifyListeners();
-      } // Check if we need to sync
-      if (await _cacheManager.shouldSync()) {
-        final response = await SupabaseService.getUserExpenses();
-        _expenses = response.map((e) => Expense.fromJson(e)).toList();
-        await _cacheManager.cacheExpenses(response);
+      // Only use cache if the current user matches the requested user ID
+      final currentUser = SupabaseService.currentUser;
+      final isSameUser = currentUser != null && currentUser.id == userId;
+
+      if (isSameUser) {
+        // Try to get cached data only for the current user
+        final cachedExpenses = await _cacheManager.getCachedExpenses();
+        if (cachedExpenses != null) {
+          // Filter expenses to ensure they belong to the current user
+          final filteredExpenses =
+              cachedExpenses.where((e) => e['user_id'] == userId).toList();
+
+          _expenses = filteredExpenses.map((e) => Expense.fromJson(e)).toList();
+          notifyListeners();
+        }
+
+        // Check if we need to sync with the server
+        if (await _cacheManager.shouldSync()) {
+          final response = await SupabaseService.getUserExpenses();
+          _expenses = response.map((e) => Expense.fromJson(e)).toList();
+          await _cacheManager.cacheExpenses(response);
+        }
+      } else {
+        // For non-current users, we should have a different method that gets expenses by user ID
+        // This would require a new Supabase service method
+        _expenses = []; // Clear expenses if not the current user
       }
     } catch (e) {
       _error = e.toString();

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/services/supabase_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthProvider extends ChangeNotifier {
   String? _userId;
@@ -167,6 +168,27 @@ class AuthProvider extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
+
+      // Get SharedPreferences instance
+      final prefs = await SharedPreferences.getInstance();
+
+      // Clear all user-specific cache keys
+      final currentUserId = _userId;
+      if (currentUserId != null) {
+        final keysToRemove = [
+          'cached_expenses_$currentUserId',
+          'cached_groups_$currentUserId',
+          'cached_settlements_$currentUserId',
+          'last_sync'
+        ];
+
+        // Remove all user-specific keys
+        for (var key in keysToRemove) {
+          if (prefs.containsKey(key)) {
+            await prefs.remove(key);
+          }
+        }
+      }
 
       await SupabaseService.signOut();
 

@@ -149,7 +149,6 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
       _isLoading = true;
       _error = null;
     });
-
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final userId = authProvider.userId;
@@ -157,6 +156,12 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
       if (userId == null) {
         throw Exception('User not authenticated');
       }
+
+      // Clear any existing expenses data first to prevent mixing with another user's data
+      final expenseProvider =
+          Provider.of<ExpenseProvider>(context, listen: false);
+      expenseProvider.clearExpenses();
+
       await Future.wait([
         Provider.of<ExpenseProvider>(context, listen: false)
             .fetchUserExpenses(userId),

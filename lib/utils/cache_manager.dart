@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_finance_app/services/supabase_service.dart';
 
 class CacheManager {
   static const String _expensesKey = 'cached_expenses';
@@ -11,6 +12,12 @@ class CacheManager {
   final SharedPreferences _prefs;
 
   CacheManager(this._prefs);
+
+  // Get the user-specific key for better caching
+  String _getUserSpecificKey(String baseKey) {
+    final user = SupabaseService.currentUser;
+    return user != null ? '${baseKey}_${user.id}' : baseKey;
+  }
 
   Future<void> cacheData(String key, dynamic data) async {
     await _prefs.setString(key, jsonEncode(data));
@@ -24,31 +31,37 @@ class CacheManager {
   }
 
   Future<void> cacheExpenses(List<Map<String, dynamic>> expenses) async {
-    await cacheData(_expensesKey, expenses);
+    final key = _getUserSpecificKey(_expensesKey);
+    await cacheData(key, expenses);
   }
 
   Future<void> cacheGroups(List<Map<String, dynamic>> groups) async {
-    await cacheData(_groupsKey, groups);
+    final key = _getUserSpecificKey(_groupsKey);
+    await cacheData(key, groups);
   }
 
   Future<List<Map<String, dynamic>>?> getCachedExpenses() async {
-    final data = await getCachedData(_expensesKey);
+    final key = _getUserSpecificKey(_expensesKey);
+    final data = await getCachedData(key);
     if (data == null) return null;
     return List<Map<String, dynamic>>.from(data);
   }
 
   Future<List<Map<String, dynamic>>?> getCachedGroups() async {
-    final data = await getCachedData(_groupsKey);
+    final key = _getUserSpecificKey(_groupsKey);
+    final data = await getCachedData(key);
     if (data == null) return null;
     return List<Map<String, dynamic>>.from(data);
   }
 
   Future<void> cacheSettlements(List<Map<String, dynamic>> settlements) async {
-    await cacheData(_settlementsKey, settlements);
+    final key = _getUserSpecificKey(_settlementsKey);
+    await cacheData(key, settlements);
   }
 
   Future<List<Map<String, dynamic>>?> getCachedSettlements() async {
-    final data = await getCachedData(_settlementsKey);
+    final key = _getUserSpecificKey(_settlementsKey);
+    final data = await getCachedData(key);
     if (data == null) return null;
     return List<Map<String, dynamic>>.from(data);
   }
@@ -74,4 +87,4 @@ class CacheManager {
     await _prefs.remove(_settlementsKey);
     await _prefs.remove(_lastSyncKey);
   }
-} 
+}

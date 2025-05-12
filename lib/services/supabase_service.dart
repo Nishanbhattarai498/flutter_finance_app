@@ -636,11 +636,11 @@ class SupabaseService {
       throw Exception('User not authenticated');
     }
 
-    // Fetch only expenses created by the current user or where they are a participant
+    // Fetch ONLY expenses created by the current user
     final response = await _client
         .from('expenses')
-        .select('*, participants:expense_participants(user_id)')
-        .or('user_id.eq.${user.id},participants.user_id.eq.${user.id}')
+        .select('*')
+        .eq('user_id', user.id)
         .order('created_at', ascending: false);
 
     return List<Map<String, dynamic>>.from(response);
@@ -662,6 +662,15 @@ class SupabaseService {
       if (!data.containsKey('title')) {
         throw Exception("Missing required 'title' field");
       }
+
+      // Ensure the user_id is set to the current user
+      final user = await _client.auth.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Enforce the current user's ID for the expense
+      data['user_id'] = user.id;
 
       // Extract participants before sending to Supabase
       List<String> participants = [];
@@ -704,30 +713,103 @@ class SupabaseService {
 
   static Future<Map<String, dynamic>> updateExpense(
       String expenseId, Map<String, dynamic> data) async {
+    final user = await _client.auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    // First, verify this expense belongs to the current user
+    final checkResponse = await _client
+        .from('expenses')
+        .select('id')
+        .eq('id', expenseId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    if (checkResponse == null) {
+      throw Exception(
+          'Expense not found or you do not have permission to update it');
+    }
+
+    // Perform the update after verification
     final response = await _client
         .from('expenses')
         .update(data)
         .eq('id', expenseId)
+        .eq('user_id', user.id) // Additional safety check
         .select()
         .single();
+
     return response;
   }
 
   static Future<void> deleteExpense(String expenseId) async {
-    await _client.from('expenses').delete().eq('id', expenseId);
+    final user = await _client.auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    // First, verify this expense belongs to the current user
+    final checkResponse = await _client
+        .from('expenses')
+        .select('id')
+        .eq('id', expenseId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    if (checkResponse == null) {
+      throw Exception(
+          'Expense not found or you do not have permission to delete it');
+    }
+
+    try {
+      // First, delete all participants records
+      await _client
+          .from('expense_participants')
+          .delete()
+          .eq('expense_id', expenseId);
+
+      // Then delete the expense itself
+      await _client
+          .from('expenses')
+          .delete()
+          .eq('id', expenseId)
+          .eq('user_id', user.id); // Additional safety check
+    } catch (e) {
+      print('Error deleting expense: $e');
+      throw Exception('Failed to delete expense: $e');
+    }
   }
 
   // Settlement methods
   static Future<List<Map<String, dynamic>>> getUserSettlements() async {
+    // Get the current user ID
+    final user = await _client.auth.currentUser;
+
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    // Fetch only settlements for the current user
     final response = await _client
         .from('settlements')
         .select()
+        .eq('user_id', user.id) // Only get current user's settlements
         .order('created_at', ascending: false);
+
     return List<Map<String, dynamic>>.from(response);
   }
 
   static Future<Map<String, dynamic>> createSettlement(
       Map<String, dynamic> data) async {
+    final user = await _client.auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    // Ensure the settlement is associated with the current user
+    data['user_id'] = user.id;
+
     final response =
         await _client.from('settlements').insert(data).select().single();
     return response;
@@ -735,17 +817,59 @@ class SupabaseService {
 
   static Future<Map<String, dynamic>> updateSettlement(
       String settlementId, Map<String, dynamic> data) async {
+    final user = await _client.auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    // First, verify this settlement belongs to the current user
+    final checkResponse = await _client
+        .from('settlements')
+        .select('id')
+        .eq('id', settlementId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    if (checkResponse == null) {
+      throw Exception(
+          'Settlement not found or you do not have permission to update it');
+    }
+
     final response = await _client
         .from('settlements')
         .update(data)
         .eq('id', settlementId)
+        .eq('user_id', user.id) // Additional safety check
         .select()
         .single();
+
     return response;
   }
 
   static Future<void> deleteSettlement(String settlementId) async {
-    await _client.from('settlements').delete().eq('id', settlementId);
+    final user = await _client.auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    // First, verify this settlement belongs to the current user
+    final checkResponse = await _client
+        .from('settlements')
+        .select('id')
+        .eq('id', settlementId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    if (checkResponse == null) {
+      throw Exception(
+          'Settlement not found or you do not have permission to delete it');
+    }
+
+    await _client
+        .from('settlements')
+        .delete()
+        .eq('id', settlementId)
+        .eq('user_id', user.id); // Additional safety check
   }
 
   // Budget methods
