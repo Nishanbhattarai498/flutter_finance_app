@@ -3,7 +3,7 @@ import 'package:flutter_finance_app/models/group.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
 import 'package:flutter_finance_app/providers/friends_provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
-import 'package:flutter_finance_app/providers/fixed_settlement_provider.dart';
+import 'package:flutter_finance_app/providers/fixed_settlement_provider_new.dart';
 import 'package:flutter_finance_app/widgets/custom_button.dart';
 import 'package:flutter_finance_app/widgets/custom_text_field.dart';
 import 'package:flutter_finance_app/widgets/friend_selector.dart';
@@ -80,11 +80,10 @@ class _AddSettlementScreenState extends State<AddSettlementScreen> {
       }
       final currentUserId = authProvider.userId!;
       setState(() => _isLoading = true);
-
       try {
         // Create settlement(s) based on whether this is a personal or group settlement
         final settlementProvider =
-            Provider.of<SettlementProvider>(context, listen: false);
+            Provider.of<FixedSettlementProvider>(context, listen: false);
         final amount = double.parse(_amountController.text);
         final notes = _notesController.text.trim();
         if (_selectedGroup == null) {

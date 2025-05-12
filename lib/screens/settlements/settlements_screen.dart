@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/models/settlement.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
-import 'package:flutter_finance_app/providers/fixed_settlement_provider.dart';
+import 'package:flutter_finance_app/providers/fixed_settlement_provider_new.dart';
 import 'package:flutter_finance_app/screens/settlements/add_settlement_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -24,14 +24,14 @@ class _SettlementsScreenState extends State<SettlementsScreen> {
     final userId = authProvider.userId;
 
     if (userId != null) {
-      await Provider.of<SettlementProvider>(context, listen: false)
+      await Provider.of<FixedSettlementProvider>(context, listen: false)
           .fetchUserSettlements();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final settlementProvider = Provider.of<SettlementProvider>(context);
+    final settlementProvider = Provider.of<FixedSettlementProvider>(context);
     final settlements = settlementProvider.settlements;
     final authProvider = Provider.of<AuthProvider>(context);
     final currentUserId = authProvider.userId;

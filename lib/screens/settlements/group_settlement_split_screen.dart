@@ -3,7 +3,7 @@ import 'package:flutter_finance_app/models/group.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
 import 'package:flutter_finance_app/providers/friends_provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
-import 'package:flutter_finance_app/providers/fixed_settlement_provider.dart'
+import 'package:flutter_finance_app/providers/fixed_settlement_provider_new.dart'
     as settlement_provider;
 import 'package:flutter_finance_app/widgets/custom_button.dart';
 import 'package:flutter_finance_app/widgets/custom_text_field.dart';
@@ -11,7 +11,7 @@ import 'package:flutter_finance_app/widgets/friend_selector.dart';
 import 'package:provider/provider.dart';
 
 // Alias for SettlementProvider to avoid confusion
-typedef SettlementProvider = settlement_provider.SettlementProvider;
+typedef SettlementProvider = settlement_provider.FixedSettlementProvider;
 
 class GroupSettlementSplitScreen extends StatefulWidget {
   const GroupSettlementSplitScreen({Key? key}) : super(key: key);

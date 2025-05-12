@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/services/supabase_service.dart';
+import 'package:flutter_finance_app/services/supabase_service_budget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -261,14 +262,14 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _initializeUserData() async {
     // Check if current month's budget exists, create one if not
     try {
-      await SupabaseService.getCurrentMonthBudget();
+      await SupabaseServiceBudget.getCurrentMonthBudget();
       debugPrint('✅ Budget exists for current month');
     } catch (e) {
       debugPrint('❌ No budget for current month, creating one...');
       try {
         // Create a default budget for the current month (0 amount)
         // User can update it later
-        await SupabaseService.updateBudget('current', 0);
+        await SupabaseServiceBudget.updateBudget('current', 0);
         debugPrint('✅ Created default budget for current month');
       } catch (createError) {
         debugPrint('❌ Failed to create default budget: $createError');

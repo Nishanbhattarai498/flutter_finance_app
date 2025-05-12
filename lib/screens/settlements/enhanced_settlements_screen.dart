@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/models/settlement.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
-import 'package:flutter_finance_app/providers/fixed_settlement_provider.dart'
+import 'package:flutter_finance_app/providers/fixed_settlement_provider_new.dart'
     as settlement_provider;
 import 'package:flutter_finance_app/screens/settlements/add_settlement_screen.dart';
 import 'package:flutter_finance_app/screens/settlements/group_settlement_split_screen.dart';
 import 'package:provider/provider.dart';
 
 // Alias for SettlementProvider to avoid confusion
-typedef SettlementProvider = settlement_provider.SettlementProvider;
+typedef SettlementProvider = settlement_provider.FixedSettlementProvider;
 
 class EnhancedSettlementsScreen extends StatefulWidget {
   const EnhancedSettlementsScreen({Key? key}) : super(key: key);

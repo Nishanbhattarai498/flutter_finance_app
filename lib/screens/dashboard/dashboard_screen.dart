@@ -5,7 +5,7 @@ import 'package:flutter_finance_app/providers/budget_provider.dart';
 import 'package:flutter_finance_app/providers/expense_provider.dart';
 import 'package:flutter_finance_app/providers/friends_provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
-import 'package:flutter_finance_app/providers/fixed_settlement_provider.dart'
+import 'package:flutter_finance_app/providers/fixed_settlement_provider_new.dart'
     as settlement_provider;
 import 'package:flutter_finance_app/screens/dashboard/widgets/budget_card.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/expense_chart.dart';
@@ -21,7 +21,7 @@ import 'package:flutter_finance_app/screens/settlements/group_settlement_split_s
 import 'package:provider/provider.dart';
 
 // Alias for SettlementProvider to avoid confusion
-typedef SettlementProvider = settlement_provider.SettlementProvider;
+typedef SettlementProvider = settlement_provider.FixedSettlementProvider;
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);

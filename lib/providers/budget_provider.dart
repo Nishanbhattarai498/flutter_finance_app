@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_finance_app/models/budget.dart';
-import 'package:flutter_finance_app/services/supabase_service.dart';
+import 'package:flutter_finance_app/services/supabase_service_budget.dart';
 import 'package:intl/intl.dart';
 
 class BudgetProvider extends ChangeNotifier {
@@ -46,7 +46,7 @@ class BudgetProvider extends ChangeNotifier {
     notifyListeners();
     try {
       // Get the current month's budget data
-      final budgetData = await SupabaseService.getCurrentMonthBudget();
+      final budgetData = await SupabaseServiceBudget.getCurrentMonthBudget();
       _currentBudget = Budget.fromMap(budgetData);
 
       // Get expense summary for this budget period
@@ -68,7 +68,7 @@ class BudgetProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final budgetsData = await SupabaseService.getUserBudgets();
+      final budgetsData = await SupabaseServiceBudget.getUserBudgets();
       _budgets = budgetsData.map((data) => Budget.fromMap(data)).toList();
 
       _isLoading = false;
@@ -87,7 +87,8 @@ class BudgetProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final budgetData = await SupabaseService.updateBudget(budgetId, amount);
+      final budgetData =
+          await SupabaseServiceBudget.updateBudget(budgetId, amount);
 
       // Update current budget if it's the one being modified
       if (_currentBudget != null && _currentBudget!.id == budgetId) {
@@ -116,7 +117,7 @@ class BudgetProvider extends ChangeNotifier {
   // Fetch budget summary for a specific month
   Future<void> fetchBudgetSummary(String month) async {
     try {
-      _currentSummary = await SupabaseService.getBudgetSummary(month);
+      _currentSummary = await SupabaseServiceBudget.getBudgetSummary(month);
       notifyListeners();
     } catch (e) {
       _errorMessage = e.toString();
