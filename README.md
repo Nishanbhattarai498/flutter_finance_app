@@ -1,5 +1,3 @@
-
-
 # 💸 Flutter Finance App
 
 A personal finance management app built with **Flutter** that helps users **track expenses**, **manage budgets**, and **split bills** with friends or groups. Currently a work in progress — contributions and feedback are welcome!
@@ -12,7 +10,23 @@ A personal finance management app built with **Flutter** that helps users **trac
 * 📁 Category-wise transaction management
 * ☁️ Supabase backend integration
 
+## Recent Updates
 
+### Budget Feature
+- Enhanced budget functionality with improved model structure and methods.
+
+### Settlement Enhancements
+- Updated settlement cards with clear labels and color-coded indicators for payments made (green) and received (red).
+- Fixed logic for displaying financial obligations accurately.
+
+### Expense Management
+- Added delete functionality for expense entries with confirmation dialogs.
+
+### Theme Switching
+- Introduced light mode option in the profile settings.
+
+### Error Fixes
+- Resolved issues in `settings_screen.dart` and `enhanced_settlement_card.dart`.
 
 ## 🛠️ Tech Stack
 
@@ -54,8 +68,6 @@ with your actual Supabase credentials.
 flutter run
 ```
 
-
-
 ## 📁 File Structure
 
 This project is structured to support a modular Flutter application. Here's a brief description of the main files:
@@ -93,12 +105,13 @@ This project is structured to support a modular Flutter application. Here's a br
 
 ---
 
-
-
-
 ## 🤝 Contributing
 
 Pull requests are welcome! If you have suggestions for improvements or new features, feel free to open an issue.
+
+## Contribution Guidelines
+
+We welcome contributions! Please fork the repository, make your changes, and submit a pull request.
 
 ## 📄 License
 

@@ -3,6 +3,7 @@ import 'package:flutter_finance_app/models/settlement.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
 import 'package:flutter_finance_app/providers/fixed_settlement_provider_new.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_finance_app/theme/app_theme.dart';
 
 class EnhancedSettlementCard extends StatelessWidget {
   final Settlement settlement;
@@ -50,7 +51,11 @@ class EnhancedSettlementCard extends StatelessWidget {
                 Text(
                   'NPR ${settlement.amount.toStringAsFixed(2)}',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: isPayer ? Colors.red : Colors.green,
+                        // When you paid someone = Green
+                        // When you received from someone = Red
+                        color: isPayer
+                            ? AppTheme.successColor // You paid (green)
+                            : AppTheme.errorColor, // You received (red)
                       ),
                 ),
               ],
@@ -73,11 +78,15 @@ class EnhancedSettlementCard extends StatelessWidget {
                   'NPR ${profitLoss.abs().toStringAsFixed(2)}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: profitLoss >= 0 ? Colors.green : Colors.red,
+                        // Negative profitLoss = You paid (success/green)
+                        // Positive profitLoss = You received/are owed (attention/red)
+                        color: profitLoss < 0
+                            ? AppTheme.successColor // You paid (green)
+                            : AppTheme.errorColor, // You received (red)
                       ),
                 ),
                 Text(
-                  profitLoss >= 0 ? ' (profit)' : ' (expense)',
+                  profitLoss < 0 ? ' (paid)' : ' (received)',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
@@ -102,7 +111,7 @@ class EnhancedSettlementCard extends StatelessWidget {
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: settlement.status == 'completed'
-                            ? Colors.green.withOpacity(0.1)
+                            ? AppTheme.successColor.withOpacity(0.1)
                             : Colors.orange.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -110,7 +119,7 @@ class EnhancedSettlementCard extends StatelessWidget {
                         settlement.status.toUpperCase(),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: settlement.status == 'completed'
-                                  ? Colors.green
+                                  ? AppTheme.successColor
                                   : Colors.orange,
                             ),
                       ),
@@ -198,7 +207,7 @@ class EnhancedSettlementCard extends StatelessWidget {
                     icon: const Icon(Icons.check_circle_outline),
                     label: const Text('MARK AS PAID'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.green,
+                      foregroundColor: AppTheme.successColor,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -222,7 +231,7 @@ class EnhancedSettlementCard extends StatelessWidget {
                                   onPressed: () => Navigator.pop(context, true),
                                   child: const Text('DELETE'),
                                   style: TextButton.styleFrom(
-                                    foregroundColor: Colors.red,
+                                    foregroundColor: AppTheme.errorColor,
                                   ),
                                 ),
                               ],
@@ -252,7 +261,7 @@ class EnhancedSettlementCard extends StatelessWidget {
                     icon: const Icon(Icons.delete_outline),
                     label: const Text('DELETE'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
+                      foregroundColor: AppTheme.errorColor,
                     ),
                   ),
                 ],
