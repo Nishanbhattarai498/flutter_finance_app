@@ -26,21 +26,18 @@ class SupabaseServiceBudget {
       final userId = Supabase.instance.client.auth.currentUser?.id;
       if (userId == null) {
         throw 'User not authenticated';
-      }
-
-      // Get current month in YYYY-MM format
+      } // Get current month in YYYY-MM format
       final now = DateTime.now();
       final currentMonth = now.month;
       final currentYear = now.year;
-      final monthString =
-          '$currentYear-${currentMonth.toString().padLeft(2, '0')}';
 
       // Try to get the current month's budget or create a new one if it doesn't exist
       final response = await Supabase.instance.client
           .from('budgets')
           .select()
           .eq('user_id', userId)
-          .eq('month', monthString)
+          .eq('month', currentMonth)
+          .eq('year', currentYear)
           .maybeSingle();
 
       if (response != null) {
@@ -50,7 +47,8 @@ class SupabaseServiceBudget {
       // If no budget exists for this month, create one
       final newBudget = {
         'user_id': userId,
-        'month': monthString,
+        'month': currentMonth,
+        'year': currentYear,
         'amount': 0.0,
         'currency': 'NPR',
         'created_at': DateTime.now().toIso8601String(),
@@ -113,14 +111,14 @@ class SupabaseServiceBudget {
 
       // Determine start and end date of the month
       final startDate = DateTime(year, month, 1);
-      final endDate = DateTime(year, month + 1, 0); // Last day of the month
-
-      // Get budget for the specified month
+      final endDate = DateTime(year, month + 1,
+          0); // Last day of the month      // Get budget for the specified month
       final budgetResponse = await Supabase.instance.client
           .from('budgets')
           .select()
           .eq('user_id', userId)
-          .eq('month', monthString)
+          .eq('month', month)
+          .eq('year', year)
           .maybeSingle();
 
       // Budget may not exist yet, create it if needed
@@ -128,7 +126,8 @@ class SupabaseServiceBudget {
       if (budgetResponse == null) {
         final newBudget = {
           'user_id': userId,
-          'month': monthString,
+          'month': month,
+          'year': year,
           'amount': 0.0,
           'currency': 'NPR',
           'created_at': DateTime.now().toIso8601String(),
@@ -168,8 +167,26 @@ class SupabaseServiceBudget {
         'remaining': remaining,
       };
     } catch (e) {
-      print('Error creating budget in getBudgetSummary: $e');
       throw 'Failed to get budget summary: $e';
+    }
+  }
+
+  static Future<String?> getCurrentUserId() async {
+    return Supabase.instance.client.auth.currentUser?.id;
+  }
+
+  static Future<Map<String, dynamic>> createBudget(
+      Map<String, dynamic> data) async {
+    try {
+      final response = await Supabase.instance.client
+          .from('budgets')
+          .insert(data)
+          .select()
+          .single();
+
+      return response;
+    } catch (e) {
+      throw 'Failed to create budget: $e';
     }
   }
 }

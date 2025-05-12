@@ -87,10 +87,8 @@ class BudgetProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final budgetData =
-          await SupabaseServiceBudget.updateBudget(budgetId, amount);
-
-      // Update current budget if it's the one being modified
+      final budgetData = await SupabaseServiceBudget.updateBudget(budgetId,
+          amount); // Update current budget if it's the one being modified
       if (_currentBudget != null && _currentBudget!.id == budgetId) {
         _currentBudget = Budget.fromMap(budgetData);
         // Refresh summary with new budget amount
@@ -144,11 +142,31 @@ class BudgetProvider extends ChangeNotifier {
         notifyListeners();
         return result;
       } else {
-        // This should rarely happen since fetchCurrentBudget creates a budget if none exists
-        _isLoading = false;
-        _errorMessage = 'Could not set budget: No budget record found';
-        notifyListeners();
-        return false;
+        // Try to create a new budget if fetchCurrentBudget didn't work
+        try {
+          final now = DateTime.now();
+          final budgetData = await SupabaseServiceBudget.createBudget({
+            'user_id':
+                (await SupabaseServiceBudget.getCurrentUserId()) ?? 'unknown',
+            'month': now.month,
+            'year': now.year,
+            'amount': amount,
+            'currency': 'NPR',
+            'created_at': now.toIso8601String(),
+            'updated_at': now.toIso8601String(),
+          });
+          _currentBudget = Budget.fromMap(budgetData);
+          await fetchBudgetSummary(_currentBudget!.monthString);
+          _isLoading = false;
+          notifyListeners();
+          return true;
+        } catch (createError) {
+          _isLoading = false;
+          _errorMessage =
+              'Could not set budget: No budget record found. Error: $createError';
+          notifyListeners();
+          return false;
+        }
       }
     } catch (e) {
       _isLoading = false;

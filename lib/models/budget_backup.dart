@@ -45,11 +45,7 @@ class Budget {
           final monthStr = map['month'] as String;
           if (monthStr.contains('-')) {
             final parts = monthStr.split('-');
-            if (parts.length == 2) {
-              month = int.tryParse(parts[1]) ?? DateTime.now().month;
-            } else {
-              month = int.tryParse(monthStr) ?? DateTime.now().month;
-            }
+            month = int.tryParse(parts[1]) ?? DateTime.now().month;
           } else {
             month = int.tryParse(monthStr) ?? DateTime.now().month;
           }
@@ -65,11 +61,7 @@ class Budget {
           final yearStr = map['year'] as String;
           if (yearStr.contains('-')) {
             final parts = yearStr.split('-');
-            if (parts.length > 0) {
-              year = int.tryParse(parts[0]) ?? DateTime.now().year;
-            } else {
-              year = int.tryParse(yearStr) ?? DateTime.now().year;
-            }
+            year = int.tryParse(parts[0]) ?? DateTime.now().year;
           } else {
             year = int.tryParse(yearStr) ?? DateTime.now().year;
           }
@@ -103,6 +95,7 @@ class Budget {
             : DateTime.now(),
       );
     } catch (e) {
+      print('Error parsing Budget: $e with data: $map');
       // Return fallback budget
       return Budget(
         id: 'error_${DateTime.now().millisecondsSinceEpoch}',
@@ -127,9 +120,8 @@ class Budget {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
-  }
+  } // Get human-readable month name
 
-  // Get human-readable month name
   String get monthName {
     final date = DateTime(year, month);
     return DateFormat('MMMM yyyy').format(date);

@@ -41,14 +41,11 @@ class Budget {
         if (map['month'] is int) {
           month = map['month'] as int;
         } else if (map['month'] is String) {
-          // Try to parse month from YYYY-MM format or plain string
           final monthStr = map['month'] as String;
           if (monthStr.contains('-')) {
             final parts = monthStr.split('-');
             if (parts.length == 2) {
               month = int.tryParse(parts[1]) ?? DateTime.now().month;
-            } else {
-              month = int.tryParse(monthStr) ?? DateTime.now().month;
             }
           } else {
             month = int.tryParse(monthStr) ?? DateTime.now().month;
@@ -61,21 +58,18 @@ class Budget {
         if (map['year'] is int) {
           year = map['year'] as int;
         } else if (map['year'] is String) {
-          // Try to parse year from YYYY-MM format or plain string
           final yearStr = map['year'] as String;
           if (yearStr.contains('-')) {
             final parts = yearStr.split('-');
-            if (parts.length > 0) {
+            if (parts.isNotEmpty) {
               year = int.tryParse(parts[0]) ?? DateTime.now().year;
-            } else {
-              year = int.tryParse(yearStr) ?? DateTime.now().year;
             }
           } else {
             year = int.tryParse(yearStr) ?? DateTime.now().year;
           }
         }
       }
-
+      
       // For backward compatibility, if month is in YYYY-MM format and year is missing, extract both
       if (map['month'] is String && (map['year'] == null)) {
         final monthStr = map['month'] as String;
@@ -133,32 +127,5 @@ class Budget {
   String get monthName {
     final date = DateTime(year, month);
     return DateFormat('MMMM yyyy').format(date);
-  }
-
-  // Get YYYY-MM format string for month
-  String get monthString {
-    return '$year-${month.toString().padLeft(2, '0')}';
-  }
-
-  Budget copyWith({
-    String? id,
-    String? userId,
-    double? amount,
-    String? currency,
-    int? month,
-    int? year,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) {
-    return Budget(
-      id: id ?? this.id,
-      userId: userId ?? this.userId,
-      amount: amount ?? this.amount,
-      currency: currency ?? this.currency,
-      month: month ?? this.month,
-      year: year ?? this.year,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
   }
 }
