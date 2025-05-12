@@ -14,7 +14,9 @@ import 'package:flutter_finance_app/screens/friends/friends_screen.dart';
 import 'package:flutter_finance_app/screens/groups/groups_screen.dart';
 import 'package:flutter_finance_app/screens/notifications/notifications_screen.dart';
 import 'package:flutter_finance_app/screens/profile/profile_screen.dart';
-import 'package:flutter_finance_app/screens/settlements/settlements_screen.dart';
+import 'package:flutter_finance_app/screens/settlements/add_settlement_screen.dart';
+import 'package:flutter_finance_app/screens/settlements/enhanced_settlements_screen.dart';
+import 'package:flutter_finance_app/screens/settlements/group_settlement_split_screen.dart';
 import 'package:provider/provider.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -33,7 +35,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     _DashboardHomePage(),
     GroupsScreen(),
     FriendsScreen(),
-    SettlementsScreen(),
+    EnhancedSettlementsScreen(),
     ProfileScreen(),
   ];
 
@@ -104,11 +106,51 @@ class _DashboardScreenState extends State<DashboardScreen>
       floatingActionButton: ScaleTransition(
         scale: _fabAnimationController,
         child: FloatingActionButton(
-          onPressed: () => _navigateToAddExpense(context),
+          onPressed: () => _showAddOptions(context),
           child: const Icon(Icons.add),
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+    );
+  }
+
+  void _showAddOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.receipt_long,
+                    color: Theme.of(context).primaryColor),
+                title: const Text('Add Expense'),
+                subtitle: const Text('Record a new expense'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _navigateToAddExpense(context);
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: Icon(Icons.swap_horiz,
+                    color: Theme.of(context).primaryColor),
+                title: const Text('Add Settlement'),
+                subtitle: const Text('Record a new settlement'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _navigateToAddSettlement(context);
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -117,6 +159,54 @@ class _DashboardScreenState extends State<DashboardScreen>
       MaterialPageRoute(
         builder: (_) => const AddExpenseScreen(),
         fullscreenDialog: true,
+      ),
+    );
+  }
+
+  void _navigateToAddSettlement(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: Icon(Icons.person_outline,
+                color: Theme.of(context).primaryColor),
+            title: const Text('One-to-One Settlement'),
+            subtitle: const Text('Settle with one person'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const AddSettlementScreen(),
+                  fullscreenDialog: true,
+                ),
+              );
+            },
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: Icon(Icons.group_outlined,
+                color: Theme.of(context).primaryColor),
+            title: const Text('Equal Split Settlement'),
+            subtitle:
+                const Text('Split an amount equally among multiple people'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const GroupSettlementSplitScreen(),
+                  fullscreenDialog: true,
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+        ],
       ),
     );
   }

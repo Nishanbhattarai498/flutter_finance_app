@@ -231,6 +231,33 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // Reset password functionality
+  Future<Map<String, dynamic>> resetPassword(String email) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final success = await SupabaseService.resetPassword(email);
+
+      _isLoading = false;
+      notifyListeners();
+
+      return {
+        'success': success,
+        'message':
+            'Password reset link has been sent to your email. Please check your inbox.',
+      };
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+
+      return {
+        'success': false,
+        'message': e.toString(),
+      };
+    }
+  }
+
   Future<void> _initializeUserData() async {
     // Check if current month's budget exists, create one if not
     try {

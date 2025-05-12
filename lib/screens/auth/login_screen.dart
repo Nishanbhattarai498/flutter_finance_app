@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
+import 'package:flutter_finance_app/screens/auth/forgot_password_screen.dart';
 import 'package:flutter_finance_app/screens/auth/register_screen.dart';
 import 'package:flutter_finance_app/screens/dashboard/dashboard_screen.dart';
 import 'package:flutter_finance_app/widgets/custom_button.dart';
@@ -134,7 +135,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {
-                        // Navigate to forgot password screen
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ForgotPasswordScreen(),
+                          ),
+                        );
                       },
                       child: const Text('Forgot Password?'),
                     ),

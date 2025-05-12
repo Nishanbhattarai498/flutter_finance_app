@@ -6,11 +6,13 @@ import 'package:provider/provider.dart';
 class FriendSelector extends StatefulWidget {
   final List<String> selectedFriends;
   final ValueChanged<List<String>> onFriendsSelected;
+  final int? maxSelection; // Maximum number of friends that can be selected
 
   const FriendSelector({
     Key? key,
     required this.selectedFriends,
     required this.onFriendsSelected,
+    this.maxSelection,
   }) : super(key: key);
 
   @override
@@ -45,6 +47,24 @@ class _FriendSelectorState extends State<FriendSelector> {
     if (selectedFriends.contains(friendId)) {
       selectedFriends.remove(friendId);
     } else {
+      // Check if we've reached the maximum selection limit
+      if (widget.maxSelection != null &&
+          selectedFriends.length >= widget.maxSelection!) {
+        // If we have a maximum and we've reached it, replace the last selection
+        if (widget.maxSelection == 1) {
+          selectedFriends.clear();
+        } else {
+          // Show a message if we're over the limit (but not for single selection)
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content:
+                  Text('You can only select ${widget.maxSelection} friends'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+      }
       selectedFriends.add(friendId);
     }
     widget.onFriendsSelected(selectedFriends);

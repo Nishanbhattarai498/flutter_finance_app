@@ -94,6 +94,23 @@ class SupabaseService {
     await _client.auth.signOut();
   }
 
+  // Password reset functionality
+  static Future<bool> resetPassword(String email) async {
+    try {
+      await _client.auth.resetPasswordForEmail(
+        email,
+        redirectTo: 'io.supabase.flutterfinance://login/reset-callback/',
+      );
+      return true;
+    } on AuthException catch (e) {
+      print('Auth error during password reset: ${e.message}');
+      throw e.message;
+    } catch (e) {
+      print('Unexpected error during password reset: $e');
+      throw 'An unexpected error occurred. Please try again later.';
+    }
+  }
+
   static User? get currentUser => _client.auth.currentUser;
 
   // Profile methods
