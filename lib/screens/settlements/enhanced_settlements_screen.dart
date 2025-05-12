@@ -877,6 +877,12 @@ class _SettlementCard extends StatelessWidget {
     final isPayer = settlement.payerId == currentUserId;
     final profitLoss = isPayer ? -settlement.amount : settlement.amount;
 
+    // Determine if the user can edit/delete this settlement
+    // Allow both payer and receiver to edit/delete
+    final canModify = settlement.payerId == currentUserId ||
+        settlement.receiverId == currentUserId;
+    final isCompleted = settlement.status == 'completed';
+
     return Card(
       elevation: 2,
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -1000,8 +1006,199 @@ class _SettlementCard extends StatelessWidget {
                 ],
               ),
             ),
+
+            // Add edit/delete buttons if the user can modify this settlement
+            if (canModify && !isCompleted) ...[
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.only(left: 48.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    // Edit button
+                    TextButton.icon(
+                      icon: const Icon(Icons.edit, size: 18),
+                      label: const Text('Edit'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.blue,
+                        backgroundColor: Colors.blue.withOpacity(0.1),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed: () {
+                        _showEditSettlementDialog(context, settlement);
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    // Delete button
+                    TextButton.icon(
+                      icon: const Icon(Icons.delete, size: 18),
+                      label: const Text('Delete'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        backgroundColor: Colors.red.withOpacity(0.1),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed: () {
+                        _showDeleteConfirmation(context, settlement);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ]
           ],
         ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context, Settlement settlement) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Settlement'),
+        content: const Text(
+          'Are you sure you want to delete this settlement? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              try {
+                final settlementProvider = Provider.of<SettlementProvider>(
+                  context,
+                  listen: false,
+                );
+
+                final success =
+                    await settlementProvider.deleteSettlement(settlement.id);
+
+                if (success && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Settlement deleted successfully')),
+                  );
+                } else if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text(
+                            'Failed to delete settlement: ${settlementProvider.errorMessage}')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditSettlementDialog(BuildContext context, Settlement settlement) {
+    final amountController =
+        TextEditingController(text: settlement.amount.toString());
+    final notesController = TextEditingController(text: settlement.notes ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Settlement'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: amountController,
+              decoration: const InputDecoration(
+                labelText: 'Amount',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: notesController,
+              decoration: const InputDecoration(
+                labelText: 'Notes',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                double amount = double.parse(amountController.text);
+                if (amount <= 0) {
+                  throw 'Amount must be greater than zero';
+                }
+
+                Navigator.of(ctx).pop();
+
+                final settlementProvider =
+                    Provider.of<SettlementProvider>(context, listen: false);
+
+                final data = {
+                  'amount': amount,
+                  'notes': notesController.text,
+                  'updated_at': DateTime.now().toIso8601String(),
+                };
+
+                final success = await settlementProvider.updateSettlement(
+                    settlement.id, data);
+
+                if (success && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Settlement updated successfully')),
+                  );
+                } else if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text(
+                            'Failed to update settlement: ${settlementProvider.errorMessage}')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
       ),
     );
   }
