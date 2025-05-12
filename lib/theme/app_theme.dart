@@ -19,9 +19,6 @@ class AppTheme {
   static const Color primaryColorLight = Color(0xFFBBDEFB); // Light Blue
   static const Color textColorLight = Color(0xFFBDBDBD); // Light Gray
 
-  // Theme mode - by default use system theme
-  static ThemeMode get themeMode => ThemeMode.system;
-
   // Gradients
   static const LinearGradient primaryGradient = LinearGradient(
     colors: [Color(0xFF1976D2), Color(0xFF1E88E5)],

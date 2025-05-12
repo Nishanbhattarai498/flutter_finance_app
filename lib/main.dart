@@ -6,6 +6,7 @@ import 'package:flutter_finance_app/providers/expense_provider.dart';
 import 'package:flutter_finance_app/providers/friends_provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
 import 'package:flutter_finance_app/providers/fixed_settlement_provider_new.dart';
+import 'package:flutter_finance_app/providers/theme_provider.dart';
 import 'package:flutter_finance_app/screens/auth/login_screen.dart';
 import 'package:flutter_finance_app/screens/dashboard/dashboard_screen.dart';
 import 'package:flutter_finance_app/services/supabase_service.dart';
@@ -41,7 +42,6 @@ void main() async {
   // Initialize SharedPreferences
   final prefs = await SharedPreferences.getInstance();
   final cacheManager = CacheManager(prefs);
-
   runApp(
     MultiProvider(
       providers: [
@@ -63,6 +63,9 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => FriendsProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => ThemeProvider(),
         ),
       ],
       child: const MyApp(),
@@ -90,10 +93,10 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    final themeMode = AppTheme.themeMode;
+    final themeProvider = Provider.of<ThemeProvider>(context);
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      themeMode: themeMode,
+      themeMode: themeProvider.themeMode,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       home: Consumer<AuthProvider>(
