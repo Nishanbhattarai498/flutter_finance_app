@@ -17,16 +17,23 @@ class AuthProvider extends ChangeNotifier {
   Future<void> checkAuth() async {
     try {
       _isLoading = true;
-      notifyListeners();
+      // Avoid notifying listeners during build phase
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
 
       _isAuthenticated = await checkAuthenticationStatus();
 
       _isLoading = false;
-      notifyListeners();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
     } catch (e) {
       _isLoading = false;
       _isAuthenticated = false;
-      notifyListeners();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
       debugPrint('Error during auth check: $e');
     }
   }

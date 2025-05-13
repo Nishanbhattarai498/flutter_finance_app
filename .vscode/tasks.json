@@ -3,9 +3,12 @@
 	"tasks": [
 		{
 			"type": "shell",
-			"label": "flutter-run",
-			"command": "flutter run",
-			"isBackground": true
+			"label": "Run Flutter Tests",
+			"command": "flutter test",
+			"isBackground": false,
+			"problemMatcher": [
+				"$dart"
+			]
 		}
 	]
 }

@@ -38,10 +38,11 @@ void main() async {
     supabaseUrl: Secrets.supabaseUrl,
     supabaseAnonKey: Secrets.supabaseAnonKey,
   );
-
+  
   // Initialize SharedPreferences
   final prefs = await SharedPreferences.getInstance();
   final cacheManager = CacheManager(prefs);
+  
   runApp(
     MultiProvider(
       providers: [
@@ -64,9 +65,7 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => FriendsProvider(),
         ),
-        ChangeNotifierProvider(
-          create: (_) => ThemeProvider(),
-        ),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
       child: const MyApp(),
     ),
@@ -93,10 +92,10 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final themeMode = Provider.of<ThemeProvider>(context).themeMode;
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      themeMode: themeProvider.themeMode,
+      themeMode: themeMode,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       home: Consumer<AuthProvider>(
