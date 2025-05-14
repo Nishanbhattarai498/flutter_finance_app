@@ -38,11 +38,11 @@ void main() async {
     supabaseUrl: Secrets.supabaseUrl,
     supabaseAnonKey: Secrets.supabaseAnonKey,
   );
-  
+
   // Initialize SharedPreferences
   final prefs = await SharedPreferences.getInstance();
   final cacheManager = CacheManager(prefs);
-  
+
   runApp(
     MultiProvider(
       providers: [
