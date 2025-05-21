@@ -5,6 +5,7 @@ import 'package:flutter_finance_app/providers/group_provider.dart';
 import 'package:flutter_finance_app/screens/groups/create_group_screen.dart';
 import 'package:flutter_finance_app/screens/groups/group_details_screen.dart';
 import 'package:provider/provider.dart';
+import 'dart:ui';
 
 class GroupsScreen extends StatefulWidget {
   const GroupsScreen({super.key});
@@ -46,35 +47,67 @@ class _GroupsScreenState extends State<GroupsScreen> {
     final groupProvider = Provider.of<GroupProvider>(context);
     final groups = groupProvider.groups;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Groups'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const CreateGroupScreen()),
-              );
-            },
+    return Stack(
+      children: [
+        // Gradient background
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF1976D2), Color(0xFF26A69A)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _refreshGroups,
-        child: groupProvider.isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : groups.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16.0),
-                    itemCount: groups.length,
-                    itemBuilder: (context, index) {
-                      final group = groups[index];
-                      return _buildGroupCard(context, group);
-                    },
-                  ),
-      ),
+        ),
+        Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            title: const Text('My Groups'),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const CreateGroupScreen()),
+                  );
+                },
+              ),
+            ],
+          ),
+          body: RefreshIndicator(
+            onRefresh: _refreshGroups,
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Card(
+                elevation: 8,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                color: Theme.of(context).cardColor.withOpacity(0.96),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                  child: groupProvider.isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : groups.isEmpty
+                          ? _buildEmptyState()
+                          : ListView.builder(
+                              padding: EdgeInsets.zero,
+                              itemCount: groups.length,
+                              itemBuilder: (context, index) {
+                                final group = groups[index];
+                                return _buildGroupCard(context, group);
+                              },
+                            ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
