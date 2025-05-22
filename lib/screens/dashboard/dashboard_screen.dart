@@ -36,7 +36,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   int _currentIndex = 0;
   late final AnimationController _fabAnimationController;
 
-  final List<Widget> _pages = const [
+  final List<Widget> _pages = [
     _DashboardHomePage(),
     GroupsScreen(),
     FriendsScreen(),
@@ -87,40 +87,68 @@ class _DashboardScreenState extends State<DashboardScreen>
         // Main content with transparency
         Scaffold(
           backgroundColor: Colors.transparent,
-          body: IndexedStack(
-            index: _currentIndex,
-            children: _pages,
+          body: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 350),
+            switchInCurve: Curves.easeIn,
+            switchOutCurve: Curves.easeOut,
+            child: IndexedStack(
+              key: ValueKey(_currentIndex),
+              index: _currentIndex,
+              children: _pages,
+            ),
           ),
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: _currentIndex,
-            onDestinationSelected: _onTabChanged,
-            destinations: [
-              const NavigationDestination(
-                icon: Icon(Icons.dashboard_outlined),
-                selectedIcon: Icon(Icons.dashboard),
-                label: 'Dashboard',
+          bottomNavigationBar: Container(
+            decoration: BoxDecoration(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 16,
+                  offset: const Offset(0, -4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: NavigationBar(
+                  backgroundColor:
+                      Theme.of(context).cardColor.withOpacity(0.92),
+                  selectedIndex: _currentIndex,
+                  onDestinationSelected: _onTabChanged,
+                  destinations: const [
+                    NavigationDestination(
+                      icon: Icon(Icons.dashboard_outlined),
+                      selectedIcon: Icon(Icons.dashboard),
+                      label: 'Dashboard',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.group_outlined),
+                      selectedIcon: Icon(Icons.group),
+                      label: 'Groups',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.people_outlined),
+                      selectedIcon: Icon(Icons.people),
+                      label: 'Friends',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.swap_horiz_outlined),
+                      selectedIcon: Icon(Icons.swap_horiz),
+                      label: 'Settlements',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.person_outline),
+                      selectedIcon: Icon(Icons.person),
+                      label: 'Profile',
+                    ),
+                  ],
+                ),
               ),
-              const NavigationDestination(
-                icon: Icon(Icons.group_outlined),
-                selectedIcon: Icon(Icons.group),
-                label: 'Groups',
-              ),
-              const NavigationDestination(
-                icon: Icon(Icons.people_outlined),
-                selectedIcon: Icon(Icons.people),
-                label: 'Friends',
-              ),
-              const NavigationDestination(
-                icon: Icon(Icons.swap_horiz_outlined),
-                selectedIcon: Icon(Icons.swap_horiz),
-                label: 'Settlements',
-              ),
-              const NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person),
-                label: 'Profile',
-              ),
-            ],
+            ),
           ),
           floatingActionButton: ScaleTransition(
             scale: _fabAnimationController,
