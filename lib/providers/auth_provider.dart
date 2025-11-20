@@ -272,11 +272,24 @@ class AuthProvider extends ChangeNotifier {
       await SupabaseServiceBudget.getCurrentMonthBudget();
       debugPrint('✅ Budget exists for current month');
     } catch (e) {
-      debugPrint('❌ No budget for current month, creating one...');
+      debugPrint('❌ No budget for current month, creating one... ($e)');
       try {
-        // Create a default budget for the current month (0 amount)
-        // User can update it later
-        await SupabaseServiceBudget.updateBudget('current', 0);
+        final userId = await SupabaseServiceBudget.getCurrentUserId();
+        final now = DateTime.now();
+
+        if (userId == null) {
+          throw 'User not authenticated';
+        }
+
+        await SupabaseServiceBudget.createBudget({
+          'user_id': userId,
+          'month': now.month,
+          'year': now.year,
+          'amount': 0,
+          'currency': 'NPR',
+          'created_at': now.toIso8601String(),
+          'updated_at': now.toIso8601String(),
+        });
         debugPrint('✅ Created default budget for current month');
       } catch (createError) {
         debugPrint('❌ Failed to create default budget: $createError');

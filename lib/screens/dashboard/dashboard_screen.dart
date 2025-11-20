@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/models/expense.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
@@ -5,8 +6,7 @@ import 'package:flutter_finance_app/providers/budget_provider.dart';
 import 'package:flutter_finance_app/providers/expense_provider.dart';
 import 'package:flutter_finance_app/providers/friends_provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
-import 'package:flutter_finance_app/providers/fixed_settlement_provider_new.dart'
-    as settlement_provider;
+import 'package:flutter_finance_app/providers/fixed_settlement_provider_new.dart' as settlement_provider;
 import 'package:flutter_finance_app/screens/dashboard/widgets/budget_card.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/expense_chart.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/recent_expenses.dart';
@@ -18,10 +18,9 @@ import 'package:flutter_finance_app/screens/profile/profile_screen.dart';
 import 'package:flutter_finance_app/screens/settlements/add_settlement_screen.dart';
 import 'package:flutter_finance_app/screens/settlements/enhanced_settlements_screen.dart';
 import 'package:flutter_finance_app/screens/settlements/group_settlement_split_screen.dart';
+import 'package:flutter_finance_app/theme/app_theme.dart';
 import 'package:provider/provider.dart';
-import 'dart:ui';
 
-// Alias for SettlementProvider to avoid confusion
 typedef SettlementProvider = settlement_provider.FixedSettlementProvider;
 
 class DashboardScreen extends StatefulWidget {
@@ -72,19 +71,45 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Stack(
       children: [
-        // Gradient background
+        // Animated Gradient Background
         Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF1976D2), Color(0xFF26A69A)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+          decoration: BoxDecoration(
+            gradient: isDark 
+                ? AppTheme.darkSurfaceGradient 
+                : AppTheme.primaryGradient,
+          ),
+        ),
+        // Decorative Circles for depth
+        Positioned(
+          top: -100,
+          right: -100,
+          child: Container(
+            width: 300,
+            height: 300,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.05),
             ),
           ),
         ),
-        // Main content with transparency
+        Positioned(
+          bottom: -50,
+          left: -50,
+          child: Container(
+            width: 200,
+            height: 200,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.05),
+            ),
+          ),
+        ),
+        
+        // Main content
         Scaffold(
           backgroundColor: Colors.transparent,
           body: AnimatedSwitcher(
@@ -98,54 +123,64 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           ),
           bottomNavigationBar: Container(
+            margin: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 16,
-                  offset: const Offset(0, -4),
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
             child: ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: BorderRadius.circular(24),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: NavigationBar(
-                  backgroundColor:
-                      Theme.of(context).cardColor.withOpacity(0.92),
-                  selectedIndex: _currentIndex,
-                  onDestinationSelected: _onTabChanged,
-                  destinations: const [
-                    NavigationDestination(
-                      icon: Icon(Icons.dashboard_outlined),
-                      selectedIcon: Icon(Icons.dashboard),
-                      label: 'Dashboard',
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardTheme.color?.withOpacity(0.8) ?? 
+                           Colors.white.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.1),
+                      width: 1,
                     ),
-                    NavigationDestination(
-                      icon: Icon(Icons.group_outlined),
-                      selectedIcon: Icon(Icons.group),
-                      label: 'Groups',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.people_outlined),
-                      selectedIcon: Icon(Icons.people),
-                      label: 'Friends',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.swap_horiz_outlined),
-                      selectedIcon: Icon(Icons.swap_horiz),
-                      label: 'Settlements',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.person_outline),
-                      selectedIcon: Icon(Icons.person),
-                      label: 'Profile',
-                    ),
-                  ],
+                  ),
+                  child: NavigationBar(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    selectedIndex: _currentIndex,
+                    onDestinationSelected: _onTabChanged,
+                    destinations: const [
+                      NavigationDestination(
+                        icon: Icon(Icons.dashboard_outlined),
+                        selectedIcon: Icon(Icons.dashboard_rounded),
+                        label: 'Home',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.group_outlined),
+                        selectedIcon: Icon(Icons.group_rounded),
+                        label: 'Groups',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.people_outlined),
+                        selectedIcon: Icon(Icons.people_rounded),
+                        label: 'Friends',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.swap_horiz_outlined),
+                        selectedIcon: Icon(Icons.swap_horiz_rounded),
+                        label: 'Settle',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.person_outline),
+                        selectedIcon: Icon(Icons.person_rounded),
+                        label: 'Profile',
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -154,7 +189,24 @@ class _DashboardScreenState extends State<DashboardScreen>
             scale: _fabAnimationController,
             child: FloatingActionButton(
               onPressed: () => _showAddOptions(context),
-              child: const Icon(Icons.add),
+              elevation: 4,
+              backgroundColor: AppTheme.primaryColor,
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      AppTheme.primaryColor,
+                      AppTheme.secondaryColor,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: const Center(
+                  child: Icon(Icons.add, color: Colors.white),
+                ),
+              ),
             ),
           ),
           floatingActionButtonLocation:

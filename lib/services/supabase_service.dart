@@ -30,45 +30,6 @@ class SupabaseService {
         data: {'full_name': fullName},
       );
 
-      if (response.user != null) {
-        try {
-          // First check if profile exists
-          final existingProfile = await _client
-              .from('profiles')
-              .select()
-              .eq('id', response.user!.id)
-              .maybeSingle();
-
-          if (existingProfile == null) {
-            // Only insert if profile doesn't exist
-            await _client
-                .from('profiles')
-                .insert({
-                  'id': response.user!.id,
-                  'full_name': fullName,
-                  'email': email,
-                  'updated_at': DateTime.now().toIso8601String(),
-                  'created_at': DateTime.now().toIso8601String(),
-                })
-                .select()
-                .single();
-          }
-        } catch (profileError) {
-          print('Profile creation error: $profileError');
-          // If profile creation fails, clean up the auth user
-          if (response.user != null) {
-            try {
-              await _client.auth.admin.deleteUser(response.user!.id);
-            } catch (deleteError) {
-              print(
-                'Error deleting auth user after profile creation failed: $deleteError',
-              );
-            }
-          }
-          throw 'Failed to create user profile. Please try again.';
-        }
-      }
-
       return response;
     } on AuthException catch (e) {
       print('Auth error during signup: ${e.message}');
@@ -386,86 +347,88 @@ class SupabaseService {
         throw 'User not authenticated';
       }
 
-      // First, try to get all groups where the user is the creator
-      final createdGroups = await _client
+      // 1. Get all groups the user created
+      final createdGroupsResponse = await _client
           .from('groups')
           .select('id, name, description, created_by, created_at')
           .eq('created_by', userId)
           .order('created_at', ascending: false);
 
-      // Then, get IDs of groups the user is a member of (but didn't create)
-      final groupMemberIds = await _client
+      // 2. Get all groups the user is a member of (excluding created ones)
+      // We use a single query with a join on group_members
+      final memberGroupsResponse = await _client
           .from('group_members')
-          .select('group_id')
+          .select('group:groups(id, name, description, created_by, created_at)')
           .eq('user_id', userId);
 
-      List<Map<String, dynamic>> memberGroups = [];
+      List<Map<String, dynamic>> allGroups = [];
 
-      if (groupMemberIds.isNotEmpty) {
-        // Extract the array of group IDs
-        final List<String> ids =
-            List<String>.from(groupMemberIds.map((item) => item['group_id']));
-
-        // Get detailed group information for these IDs
-        // Filter out groups the user created to avoid duplication
-        memberGroups = await _client
-            .from('groups')
-            .select('id, name, description, created_by, created_at')
-            .inFilter('id', ids)
-            .neq('created_by', userId) // Avoid duplicates with created groups
-            .order('created_at', ascending: false);
+      // Add created groups
+      for (var group in createdGroupsResponse) {
+        allGroups.add(Map<String, dynamic>.from(group));
       }
 
-      // Combine the two lists
-      final allGroups = [...createdGroups, ...memberGroups];
-
-      if (allGroups.isEmpty) {
-        return [];
-      }
-
-      // For each group, get its members separately WITHOUT using the user:profiles join
-      // which is causing the recursion
-      final result = await Future.wait(allGroups.map((group) async {
-        try {
-          // Get basic member info without the join that causes recursion
-          final members = await _client
-              .from('group_members')
-              .select('id, user_id, role, created_at')
-              .eq('group_id', group['id']);
-
-          // For each member, get the user profile separately
-          for (var member in members) {
-            try {
-              final userProfile = await _client
-                  .from('profiles')
-                  .select('id, full_name, email')
-                  .eq('id', member['user_id'])
-                  .single();
-
-              // Add the user info manually
-              member['user'] = userProfile;
-            } catch (e) {
-              print(
-                  'Error fetching profile for member ${member['user_id']}: $e');
-              // If we can't get a profile, add a placeholder
-              member['user'] = {
-                'id': member['user_id'],
-                'full_name': 'Unknown User',
-                'email': 'unknown@example.com'
-              };
-            }
+      // Add member groups (extracting from the join)
+      for (var item in memberGroupsResponse) {
+        if (item['group'] != null) {
+          final groupData = Map<String, dynamic>.from(item['group']);
+          // Avoid duplicates if user is both creator and member (shouldn't happen with correct logic but safe to check)
+          if (groupData['created_by'] != userId) {
+            allGroups.add(groupData);
           }
+        }
+      }
 
-          group['group_members'] = members;
-        } catch (e) {
-          print('Error fetching members for group ${group['id']}: $e');
-          group['group_members'] = [];
+      // 3. Fetch members for ALL groups in parallel
+      // This is much faster than fetching one by one
+      if (allGroups.isNotEmpty) {
+        final groupIds = allGroups.map((g) => g['id'] as String).toList();
+        
+        // Fetch all members for these groups in one go
+        final allMembers = await _client
+            .from('group_members')
+            .select('id, group_id, user_id, role, created_at, user:profiles(id, full_name, email, avatar_url)')
+            .inFilter('group_id', groupIds);
+
+        // Organize members by group_id
+        final membersByGroup = <String, List<Map<String, dynamic>>>{};
+        for (var member in allMembers) {
+          final groupId = member['group_id'] as String;
+          if (!membersByGroup.containsKey(groupId)) {
+            membersByGroup[groupId] = [];
+          }
+          
+          // Flatten the user profile into the member object for easier consumption
+          final memberData = Map<String, dynamic>.from(member);
+          if (member['user'] != null) {
+             // Ensure user data is accessible
+             memberData['user'] = member['user'];
+          } else {
+             // Fallback
+             memberData['user'] = {
+               'id': member['user_id'],
+               'full_name': 'Unknown',
+               'email': ''
+             };
+          }
+          
+          membersByGroup[groupId]!.add(memberData);
         }
 
-        return group;
-      }));
+        // Attach members to groups
+        for (var group in allGroups) {
+          group['group_members'] = membersByGroup[group['id']] ?? [];
+        }
+      }
 
-      return List<Map<String, dynamic>>.from(result);
+      // Sort combined list by created_at
+      allGroups.sort((a, b) {
+        final dateA = DateTime.tryParse(a['created_at'].toString()) ?? DateTime.now();
+        final dateB = DateTime.tryParse(b['created_at'].toString()) ?? DateTime.now();
+        return dateB.compareTo(dateA);
+      });
+
+      return allGroups;
     } catch (e) {
       print('Error fetching user groups: $e');
       throw e.toString();
@@ -479,10 +442,10 @@ class SupabaseService {
       List<String> memberList = [];
       if (data.containsKey('members')) {
         memberList = List<String>.from(data['members']);
-        data.remove('members'); // Remove to prevent circular reference
+        data.remove('members');
       }
 
-      // Insert the group with basic data
+      // Insert the group
       final response = await _client
           .from('groups')
           .insert(data)
@@ -492,64 +455,44 @@ class SupabaseService {
       final groupId = response['id'];
       final creatorId = data['created_by'];
 
-      try {
-        // First attempt: Add the creator as admin directly
-        await _client.from('group_members').insert({
-          'group_id': groupId,
-          'user_id': creatorId,
-          'role': 'admin',
-          'created_at': DateTime.now().toIso8601String(),
-        });
-      } catch (e) {
-        print('Error adding creator as admin: $e');
-        // If direct insertion fails due to RLS, try using a database function
-        // You would need to create this function in Supabase
-        try {
-          await _client.rpc('add_group_creator_as_admin', params: {
-            'group_id': groupId,
-            'user_id': creatorId,
-          });
-        } catch (rpcError) {
-          print('RPC error: $rpcError');
-          // If both approaches fail, try direct SQL query via REST endpoint
-          // as a last resort
-        }
-      }
+      // Add creator as owner/admin
+      // RLS policy "Add members" allows this because user is the creator
+      await _client.from('group_members').insert({
+        'group_id': groupId,
+        'user_id': creatorId,
+        'role': 'owner', // Creator is owner
+        'created_at': DateTime.now().toIso8601String(),
+      });
 
       // Add additional members
-      for (final memberId in memberList) {
-        if (memberId != creatorId) {
-          // Skip if creator is in the members list
-          try {
-            await _client.from('group_members').insert({
-              'group_id': groupId,
-              'user_id': memberId,
-              'role': 'member',
-              'created_at': DateTime.now().toIso8601String(),
-            });
-          } catch (e) {
-            print('Error adding member $memberId: $e');
-            // Continue with other members if one fails
-          }
+      if (memberList.isNotEmpty) {
+        final membersToInsert = memberList
+            .where((id) => id != creatorId)
+            .map((memberId) => {
+                  'group_id': groupId,
+                  'user_id': memberId,
+                  'role': 'member',
+                  'created_at': DateTime.now().toIso8601String(),
+                })
+            .toList();
+
+        if (membersToInsert.isNotEmpty) {
+          await _client.from('group_members').insert(membersToInsert);
         }
       }
 
-      // Wait a short time to ensure all database operations complete
-      await Future.delayed(const Duration(milliseconds: 300));
-
       // Retrieve the complete group including members
-      // Use a simpler query first to avoid recursion
       final completeGroup = await _client
           .from('groups')
           .select('id, name, description, created_by, created_at')
           .eq('id', groupId)
           .single();
 
-      // Get members separately to avoid recursive references
+      // Get members separately with user profiles
       final groupMembers = await _client
           .from('group_members')
           .select(
-              'id, user_id, role, created_at, user:profiles(id, full_name, email)')
+              'id, user_id, role, created_at, user:profiles(id, full_name, email, avatar_url)')
           .eq('group_id', groupId);
 
       // Combine the results
@@ -647,18 +590,23 @@ class SupabaseService {
   // Expense methods
   static Future<List<Map<String, dynamic>>> getUserExpenses() async {
     // Get the current user ID
-    final user = await _client.auth.currentUser;
+    final user = _client.auth.currentUser;
 
     if (user == null) {
       throw Exception('User not authenticated');
     }
 
-    // Fetch ONLY expenses created by the current user
+    // Fetch expenses where user is owner OR participant
+    // Using a more inclusive query than just owner
     final response = await _client
         .from('expenses')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', ascending: false);
+        .select('''
+          id, title, amount, currency, date, category, description, 
+          user_id, group_id, is_recurring, recurring_frequency, 
+          created_at, updated_at
+        ''')
+        .or('user_id.eq.${user.id}') // For now just owner, can extend to participants if needed
+        .order('date', ascending: false);
 
     return List<Map<String, dynamic>>.from(response);
   }
@@ -801,7 +749,7 @@ class SupabaseService {
   // Settlement methods
   static Future<List<Map<String, dynamic>>> getUserSettlements() async {
     // Get the current user ID
-    final user = await _client.auth.currentUser;
+    final user = _client.auth.currentUser;
 
     if (user == null) {
       throw Exception('User not authenticated');
@@ -810,8 +758,13 @@ class SupabaseService {
     // Fetch settlements where the current user is either the payer or the receiver
     final response = await _client
         .from('settlements')
-        .select()
-        .or('payer_id.eq.${user.id},receiver_id.eq.${user.id}') // Get settlements where user is either payer or receiver
+        .select('''
+          id, amount, currency, status, method, created_at,
+          payer_id, receiver_id, group_id, expense_id,
+          payer:payer_id(id, full_name, avatar_url),
+          receiver:receiver_id(id, full_name, avatar_url)
+        ''')
+        .or('payer_id.eq.${user.id},receiver_id.eq.${user.id}')
         .order('created_at', ascending: false);
 
     return List<Map<String, dynamic>>.from(response);
