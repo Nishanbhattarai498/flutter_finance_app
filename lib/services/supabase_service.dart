@@ -383,11 +383,12 @@ class SupabaseService {
       // This is much faster than fetching one by one
       if (allGroups.isNotEmpty) {
         final groupIds = allGroups.map((g) => g['id'] as String).toList();
-        
+
         // Fetch all members for these groups in one go
         final allMembers = await _client
             .from('group_members')
-            .select('id, group_id, user_id, role, created_at, user:profiles(id, full_name, email, avatar_url)')
+            .select(
+                'id, group_id, user_id, role, created_at, user:profiles(id, full_name, email, avatar_url)')
             .inFilter('group_id', groupIds);
 
         // Organize members by group_id
@@ -397,21 +398,21 @@ class SupabaseService {
           if (!membersByGroup.containsKey(groupId)) {
             membersByGroup[groupId] = [];
           }
-          
+
           // Flatten the user profile into the member object for easier consumption
           final memberData = Map<String, dynamic>.from(member);
           if (member['user'] != null) {
-             // Ensure user data is accessible
-             memberData['user'] = member['user'];
+            // Ensure user data is accessible
+            memberData['user'] = member['user'];
           } else {
-             // Fallback
-             memberData['user'] = {
-               'id': member['user_id'],
-               'full_name': 'Unknown',
-               'email': ''
-             };
+            // Fallback
+            memberData['user'] = {
+              'id': member['user_id'],
+              'full_name': 'Unknown',
+              'email': ''
+            };
           }
-          
+
           membersByGroup[groupId]!.add(memberData);
         }
 
@@ -423,8 +424,10 @@ class SupabaseService {
 
       // Sort combined list by created_at
       allGroups.sort((a, b) {
-        final dateA = DateTime.tryParse(a['created_at'].toString()) ?? DateTime.now();
-        final dateB = DateTime.tryParse(b['created_at'].toString()) ?? DateTime.now();
+        final dateA =
+            DateTime.tryParse(a['created_at'].toString()) ?? DateTime.now();
+        final dateB =
+            DateTime.tryParse(b['created_at'].toString()) ?? DateTime.now();
         return dateB.compareTo(dateA);
       });
 
@@ -629,7 +632,7 @@ class SupabaseService {
       }
 
       // Ensure the user_id is set to the current user
-      final user = await _client.auth.currentUser;
+      final user = _client.auth.currentUser;
       if (user == null) {
         throw Exception('User not authenticated');
       }
@@ -678,7 +681,7 @@ class SupabaseService {
 
   static Future<Map<String, dynamic>> updateExpense(
       String expenseId, Map<String, dynamic> data) async {
-    final user = await _client.auth.currentUser;
+    final user = _client.auth.currentUser;
     if (user == null) {
       throw Exception('User not authenticated');
     }
@@ -709,7 +712,7 @@ class SupabaseService {
   }
 
   static Future<void> deleteExpense(String expenseId) async {
-    final user = await _client.auth.currentUser;
+    final user = _client.auth.currentUser;
     if (user == null) {
       throw Exception('User not authenticated');
     }
@@ -772,7 +775,7 @@ class SupabaseService {
 
   static Future<Map<String, dynamic>> createSettlement(
       Map<String, dynamic> data) async {
-    final user = await _client.auth.currentUser;
+    final user = _client.auth.currentUser;
     if (user == null) {
       throw Exception('User not authenticated');
     } // Make sure payer_id and receiver_id are set correctly
@@ -818,7 +821,7 @@ class SupabaseService {
 
   static Future<Map<String, dynamic>> updateSettlement(
       String settlementId, Map<String, dynamic> data) async {
-    final user = await _client.auth.currentUser;
+    final user = _client.auth.currentUser;
     if (user == null) {
       throw Exception('User not authenticated');
     }
@@ -846,7 +849,7 @@ class SupabaseService {
   }
 
   static Future<void> deleteSettlement(String settlementId) async {
-    final user = await _client.auth.currentUser;
+    final user = _client.auth.currentUser;
     if (user == null) {
       throw Exception('User not authenticated');
     }
@@ -867,7 +870,7 @@ class SupabaseService {
   }
 
   static Future<void> createNotification(Map<String, dynamic> data) async {
-    final user = await _client.auth.currentUser;
+    final user = _client.auth.currentUser;
     if (user == null) {
       throw Exception('User not authenticated');
     }

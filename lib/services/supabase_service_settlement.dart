@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class SupabaseServiceFix {
   // Settlement methods
   static Future<List<Map<String, dynamic>>> getUserSettlements() async {
-    final user = await Supabase.instance.client.auth.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
       throw Exception('User not authenticated');
     }
@@ -20,7 +20,7 @@ class SupabaseServiceFix {
 
   static Future<Map<String, dynamic>> createSettlement(
       Map<String, dynamic> data) async {
-    final user = await Supabase.instance.client.auth.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
       throw Exception('User not authenticated');
     }
@@ -71,7 +71,7 @@ class SupabaseServiceFix {
 
   static Future<Map<String, dynamic>> updateSettlement(
       String settlementId, Map<String, dynamic> data) async {
-    final user = await Supabase.instance.client.auth.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
       throw Exception('User not authenticated');
     }
@@ -99,7 +99,7 @@ class SupabaseServiceFix {
   }
 
   static Future<void> deleteSettlement(String settlementId) async {
-    final user = await Supabase.instance.client.auth.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
       throw Exception('User not authenticated');
     }
@@ -124,7 +124,7 @@ class SupabaseServiceFix {
   }
 
   static Future<void> createNotification(Map<String, dynamic> data) async {
-    final user = await Supabase.instance.client.auth.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
       throw Exception('User not authenticated');
     }

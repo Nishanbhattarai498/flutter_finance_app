@@ -58,7 +58,7 @@ class AuthProvider extends ChangeNotifier {
       }
 
       // Try to get existing session
-      final session = await SupabaseService.client.auth.currentSession;
+      final session = SupabaseService.client.auth.currentSession;
       if (session?.user != null) {
         _userId = session!.user.id;
         await _fetchUserProfile();

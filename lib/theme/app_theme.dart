@@ -1,30 +1,32 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_finance_app/utils/font_loader.dart';
 
 class AppTheme {
   // Modern Fintech Palette - "Modern Midnight"
   static const Color primaryColor = Color(0xFF4E54C8); // Electric Indigo
+  static const Color primaryColorLight =
+      Color(0xFF8F94FB); // Softer Indigo for fills
   static const Color secondaryColor = Color(0xFF8F94FB); // Soft Violet
   static const Color accentColor = Color(0xFF00D2FF); // Cyan Bright
-  
+
   // Semantic Colors
   static const Color errorColor = Color(0xFFFF4B4B); // Vibrant Red
   static const Color successColor = Color(0xFF00E676); // Neon Green
   static const Color warningColor = Color(0xFFFFB300); // Amber
   static const Color infoColor = Color(0xFF2979FF); // Blue
-  
+
   // Backgrounds
   static const Color backgroundColor = Color(0xFFF8FAFC); // Cool Gray Light
   static const Color backgroundColorDark = Color(0xFF0F172A); // Deep Navy
-  
+
   // Surfaces
   static const Color surfaceColor = Colors.white;
   static const Color surfaceColorDark = Color(0xFF1E293B); // Slate 800
-  
+
   // Text
   static const Color textColor = Color(0xFF1E293B); // Slate 800
+  static const Color textColorLight =
+      textColor; // Alias for existing light text uses
   static const Color textColorDark = Color(0xFFF1F5F9); // Slate 100
   static const Color textSecondaryColor = Color(0xFF64748B); // Slate 500
   static const Color textSecondaryColorDark = Color(0xFF94A3B8); // Slate 400
