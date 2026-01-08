@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 class GroupMember {
   final String userId;
   final String groupId;

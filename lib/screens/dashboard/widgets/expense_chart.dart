@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_finance_app/theme/app_theme.dart';
 import 'package:intl/intl.dart';
 
 class ExpenseChart extends StatefulWidget {
@@ -25,42 +26,67 @@ class _ExpenseChartState extends State<ExpenseChart> {
     return Container(
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
+        gradient:
+            isDark ? AppTheme.glassGradientDark : AppTheme.glassGradientLight,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.5),
+          color: isDark
+              ? Colors.white.withOpacity(0.08)
+              : Colors.white.withOpacity(0.6),
           width: 1,
         ),
-        color: isDark ? Colors.black.withOpacity(0.3) : Colors.white.withOpacity(0.6),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
           child: Padding(
             padding: const EdgeInsets.all(20.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: Text(
-                    'Monthly Expense Breakdown',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Monthly Expense Breakdown',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(14),
                         ),
+                        child: Row(
+                          children: const [
+                            Icon(Icons.trending_up_rounded, size: 16),
+                            SizedBox(width: 6),
+                            Text('This month'),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 8),
                 AspectRatio(
-                  aspectRatio: 1.3,
+                  aspectRatio: 1.25,
                   child: PieChart(
                     PieChartData(
                       pieTouchData: PieTouchData(
@@ -79,18 +105,19 @@ class _ExpenseChartState extends State<ExpenseChart> {
                       ),
                       borderData: FlBorderData(show: false),
                       sectionsSpace: 4,
-                      centerSpaceRadius: 50,
+                      centerSpaceRadius: 54,
                       sections: _showingSections(),
+                      centerSpaceColor: Colors.transparent,
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
+                  padding: const EdgeInsets.only(bottom: 8.0),
                   child: Text(
                     'Categories',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                         ),
                   ),
                 ),
@@ -168,10 +195,14 @@ class _ExpenseChartState extends State<ExpenseChart> {
         margin: const EdgeInsets.only(bottom: 8.0),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(12),
+          color: isDark
+              ? Colors.white.withOpacity(0.03)
+              : Colors.white.withOpacity(0.6),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+            color: isDark
+                ? Colors.white.withOpacity(0.06)
+                : Colors.white.withOpacity(0.8),
           ),
         ),
         child: Row(
@@ -184,9 +215,9 @@ class _ExpenseChartState extends State<ExpenseChart> {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: color.withOpacity(0.4),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    color: color.withOpacity(0.35),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
@@ -196,16 +227,15 @@ class _ExpenseChartState extends State<ExpenseChart> {
               child: Text(
                 category,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                     ),
               ),
             ),
             const SizedBox(width: 8),
-            // Add percentage next to amount
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withOpacity(0.14),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -289,8 +319,8 @@ class _ExpenseChartState extends State<ExpenseChart> {
       final isTouched = index == touchedIndex;
 
       // Increase size contrast between touched and untouched sections
-      final fontSize = isTouched ? 20.0 : 14.0;
-      final radius = isTouched ? 130.0 : 100.0;
+      final fontSize = isTouched ? 19.0 : 13.0;
+      final radius = isTouched ? 125.0 : 96.0;
       final color = _getCategoryColor(category);
 
       // Add a bright border to highlight touched sections
@@ -328,31 +358,28 @@ class _ExpenseChartState extends State<ExpenseChart> {
     // Return consistent colors for each category with more vibrant and distinguishable colors
     switch (category.toLowerCase()) {
       case 'food':
-        return const Color(0xFFFF5252); // Bright red
+        return const Color(0xFFFF6B6B); // Coral
       case 'transport':
-        return const Color(0xFF448AFF); // Strong blue
+        return const Color(0xFF00A3FF); // Blue
       case 'housing':
-        return const Color(0xFF66BB6A); // Green
+        return const Color(0xFF12B0A5); // Teal
       case 'utilities':
-        return const Color(0xFF9C27B0); // Purple
+        return const Color(0xFF9C6BFF); // Violet
       case 'entertainment':
-        return const Color(0xFFFF9800); // Orange
+        return const Color(0xFFFFB341); // Amber
       case 'healthcare':
-        return const Color(0xFF00BCD4); // Cyan
+        return const Color(0xFF1DD1A1); // Green
       case 'education':
-        return const Color(0xFF3F51B5); // Indigo
+        return const Color(0xFF4E54C8); // Indigo
       case 'shopping':
-        return const Color(0xFFEC407A); // Pink
+        return const Color(0xFFEF72A7); // Pink
       case 'travel':
-        return const Color(0xFFFFEB3B); // Yellow
+        return const Color(0xFF6EC3FF); // Sky
       case 'other':
-        return const Color(0xFF78909C); // Blue Grey
+        return const Color(0xFF7B8FA6); // Muted blue grey
       default:
-        // Generate a color based on the category name with better contrast
-        final hue =
-            (category.hashCode % 12) * 30.0; // Space out the hues by 30 degrees
-        return HSLColor.fromAHSL(1.0, hue, 0.7, 0.5)
-            .toColor(); // More saturated colors
+        final hue = (category.hashCode % 12) * 30.0;
+        return HSLColor.fromAHSL(1.0, hue, 0.7, 0.55).toColor();
     }
   }
 }

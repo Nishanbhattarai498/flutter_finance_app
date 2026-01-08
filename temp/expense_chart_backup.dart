@@ -47,8 +47,8 @@ class ExpenseChart extends StatelessWidget {
                       child: Text(
                         DateFormat('MMM')
                             .format(expenseData[value.toInt()]['date']),
-                        style: const TextStyle(
-                          color: AppTheme.textColorLight,
+                        style: TextStyle(
+                          color: AppTheme.textSecondaryColor,
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -66,8 +66,8 @@ class ExpenseChart extends StatelessWidget {
                 getTitlesWidget: (value, meta) {
                   return Text(
                     NumberFormat.compactCurrency(symbol: 'NPR ').format(value),
-                    style: const TextStyle(
-                      color: AppTheme.textColorLight,
+                    style: TextStyle(
+                      color: AppTheme.textSecondaryColor,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),

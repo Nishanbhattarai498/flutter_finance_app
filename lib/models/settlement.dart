@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 class Settlement {
   final String id;
   final double amount;

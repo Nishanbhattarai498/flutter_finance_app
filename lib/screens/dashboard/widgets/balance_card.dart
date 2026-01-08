@@ -26,10 +26,14 @@ class BalanceCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.5),
+          color: isDark
+              ? Colors.white.withOpacity(0.1)
+              : Colors.white.withOpacity(0.5),
           width: 1,
         ),
-        color: isDark ? Colors.black.withOpacity(0.3) : Colors.white.withOpacity(0.6),
+        color: isDark
+            ? Colors.black.withOpacity(0.3)
+            : Colors.white.withOpacity(0.6),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -53,14 +57,17 @@ class BalanceCard extends StatelessWidget {
                     Text(
                       'Monthly Budget',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                     ),
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
@@ -94,9 +101,13 @@ class BalanceCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   child: LinearProgressIndicator(
                     value: progress.clamp(0.0, 1.0),
-                    backgroundColor: isDark ? Colors.white.withOpacity(0.1) : AppTheme.primaryColorLight,
+                    backgroundColor: isDark
+                        ? Colors.white.withOpacity(0.1)
+                        : AppTheme.secondaryColor.withOpacity(0.3),
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      progress > 1.0 ? AppTheme.errorColor : AppTheme.primaryColor,
+                      progress > 1.0
+                          ? AppTheme.errorColor
+                          : AppTheme.primaryColor,
                     ),
                     minHeight: 12,
                   ),
@@ -104,9 +115,13 @@ class BalanceCard extends StatelessWidget {
                 if (monthlyRecurring > 0) ...[
                   const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surface
+                          .withOpacity(0.5),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(

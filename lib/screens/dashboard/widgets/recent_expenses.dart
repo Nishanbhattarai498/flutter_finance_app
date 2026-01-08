@@ -24,24 +24,27 @@ class RecentExpenseItem extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
+        gradient:
+            isDark ? AppTheme.glassGradientDark : AppTheme.glassGradientLight,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.05) : Colors.white.withOpacity(0.5),
+          color: isDark
+              ? Colors.white.withOpacity(0.07)
+              : Colors.white.withOpacity(0.7),
           width: 1,
         ),
-        color: isDark ? Colors.black.withOpacity(0.3) : Colors.white.withOpacity(0.6),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
           child: Dismissible(
             key: Key(expense.id),
             direction: DismissDirection.endToStart,
@@ -61,8 +64,8 @@ class RecentExpenseItem extends StatelessWidget {
                 builder: (BuildContext context) {
                   return AlertDialog(
                     title: const Text('Delete Expense'),
-                    content:
-                        const Text('Are you sure you want to delete this expense?'),
+                    content: const Text(
+                        'Are you sure you want to delete this expense?'),
                     actions: <Widget>[
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(false),
@@ -121,8 +124,8 @@ class RecentExpenseItem extends StatelessWidget {
               title: Text(
                 expense.title,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,14 +134,22 @@ class RecentExpenseItem extends StatelessWidget {
                   Text(
                     expense.category,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                          color: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.color
+                              ?.withOpacity(0.7),
                         ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     DateFormat('MMM d, y').format(expense.date),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
+                          color: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.color
+                              ?.withOpacity(0.5),
                           fontSize: 11,
                         ),
                   ),
@@ -153,10 +164,11 @@ class RecentExpenseItem extends StatelessWidget {
                     children: [
                       Text(
                         currencyFormat.format(expense.amount),
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: AppTheme.errorColor,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: AppTheme.errorColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                       if (expense.isRecurring) ...[
                         const SizedBox(height: 4),
@@ -169,11 +181,12 @@ class RecentExpenseItem extends StatelessWidget {
                           ),
                           child: Text(
                             expense.recurringFrequency ?? 'Monthly',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.primaryColor,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 10,
-                                ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: AppTheme.primaryColor,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 10,
+                                    ),
                           ),
                         ),
                       ],

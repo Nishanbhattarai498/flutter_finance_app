@@ -3,6 +3,7 @@ import 'package:flutter_finance_app/models/group.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
 import 'package:flutter_finance_app/providers/expense_provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
+import 'package:flutter_finance_app/theme/app_theme.dart';
 import 'package:flutter_finance_app/widgets/custom_button.dart';
 import 'package:flutter_finance_app/widgets/custom_text_field.dart';
 import 'package:provider/provider.dart';
@@ -121,10 +122,30 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         // Gradient background
         Container(
           decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF1976D2), Color(0xFF26A69A)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+            gradient: AppTheme.primaryGradient,
+          ),
+        ),
+        Positioned(
+          top: -100,
+          right: -60,
+          child: Container(
+            width: 220,
+            height: 220,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.08),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: -90,
+          left: -50,
+          child: Container(
+            width: 200,
+            height: 200,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.08),
             ),
           ),
         ),
@@ -142,11 +163,11 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 400),
                   child: Card(
-                    elevation: 8,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(28),
                     ),
-                    color: Theme.of(context).cardColor.withOpacity(0.96),
+                    color: Theme.of(context).cardColor.withOpacity(0.78),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 24, vertical: 32),

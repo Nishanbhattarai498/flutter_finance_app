@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/providers/auth_provider.dart';
 import 'package:flutter_finance_app/screens/auth/login_screen.dart';
+import 'package:flutter_finance_app/theme/app_theme.dart';
 import 'package:flutter_finance_app/widgets/custom_button.dart';
 import 'package:flutter_finance_app/widgets/custom_text_field.dart';
 import 'package:flutter_finance_app/widgets/logo_widget.dart';
@@ -75,10 +76,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
         // Gradient background
         Container(
           decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF1976D2), Color(0xFF26A69A)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+            gradient: AppTheme.primaryGradient,
+          ),
+        ),
+        Positioned(
+          top: -110,
+          right: -70,
+          child: Container(
+            width: 240,
+            height: 240,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.08),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: -90,
+          left: -40,
+          child: Container(
+            width: 200,
+            height: 200,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.08),
             ),
           ),
         ),
@@ -96,11 +117,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 400),
                   child: Card(
-                    elevation: 8,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(28),
                     ),
-                    color: Theme.of(context).cardColor.withOpacity(0.96),
+                    color: Theme.of(context).cardColor.withOpacity(0.75),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
@@ -125,7 +146,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Sign up to get started',
+                              'Join the new finance experience.',
                               style: Theme.of(context).textTheme.bodyMedium,
                               textAlign: TextAlign.center,
                             ),

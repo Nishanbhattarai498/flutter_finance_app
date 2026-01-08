@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_finance_app/models/friend.dart';
 import 'package:flutter_finance_app/providers/friends_provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
 import 'package:flutter_finance_app/screens/groups/group_details_screen.dart';

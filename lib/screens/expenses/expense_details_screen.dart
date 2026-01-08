@@ -82,7 +82,7 @@ class ExpenseDetailsScreen extends StatelessWidget {
                                   .textTheme
                                   .bodyLarge
                                   ?.copyWith(
-                                    color: AppTheme.textColorLight,
+                                    color: AppTheme.textSecondaryColor,
                                   ),
                             ),
                             const SizedBox(height: 16),
@@ -139,7 +139,7 @@ class ExpenseDetailsScreen extends StatelessWidget {
                                   .textTheme
                                   .bodySmall
                                   ?.copyWith(
-                                    color: AppTheme.textColorLight,
+                                    color: AppTheme.textSecondaryColor,
                                   ),
                             ),
                           ],
@@ -248,7 +248,7 @@ class ExpenseDetailsScreen extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.textColorLight,
+                color: AppTheme.textSecondaryColor,
               ),
         ),
         Text(
