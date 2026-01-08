@@ -6,7 +6,8 @@ import 'package:flutter_finance_app/providers/budget_provider.dart';
 import 'package:flutter_finance_app/providers/expense_provider.dart';
 import 'package:flutter_finance_app/providers/friends_provider.dart';
 import 'package:flutter_finance_app/providers/group_provider.dart';
-import 'package:flutter_finance_app/providers/fixed_settlement_provider_new.dart' as settlement_provider;
+import 'package:flutter_finance_app/providers/fixed_settlement_provider_new.dart'
+    as settlement_provider;
 import 'package:flutter_finance_app/screens/dashboard/widgets/budget_card.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/expense_chart.dart';
 import 'package:flutter_finance_app/screens/dashboard/widgets/recent_expenses.dart';
@@ -72,14 +73,14 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Stack(
       children: [
         // Animated Gradient Background
         Container(
           decoration: BoxDecoration(
-            gradient: isDark 
-                ? AppTheme.darkSurfaceGradient 
+            gradient: isDark
+                ? AppTheme.darkSurfaceGradient
                 : AppTheme.primaryGradient,
           ),
         ),
@@ -108,7 +109,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           ),
         ),
-        
+
         // Main content
         Scaffold(
           backgroundColor: Colors.transparent,
@@ -140,8 +141,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).cardTheme.color?.withOpacity(0.8) ?? 
-                           Colors.white.withOpacity(0.8),
+                    color:
+                        Theme.of(context).cardTheme.color?.withOpacity(0.8) ??
+                            Colors.white.withOpacity(0.8),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
                       color: Colors.white.withOpacity(0.1),
@@ -401,10 +403,12 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final expenseProvider = Provider.of<ExpenseProvider>(context);
+    final budgetProvider = Provider.of<BudgetProvider>(context);
 
     final String fullName = authProvider.userProfile?['full_name'] ?? 'User';
     final double currentMonthTotal = expenseProvider.getCurrentMonthTotal();
     final double monthlyRecurring = expenseProvider.getTotalMonthlyRecurring();
+    final double budgetAmount = budgetProvider.budgetAmount;
     final List<Expense> expenses = expenseProvider.expenses;
 
     return Scaffold(
@@ -423,19 +427,29 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
                       physics: const AlwaysScrollableScrollPhysics(),
                       slivers: [
                         _buildAppBar(fullName),
-                        SliverPadding(
-                          padding: const EdgeInsets.all(16.0),
-                          sliver: SliverToBoxAdapter(
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                _buildHeroHeader(
+                                  fullName: fullName,
+                                  spent: currentMonthTotal,
+                                  recurring: monthlyRecurring,
+                                  budget: budgetAmount,
+                                ),
+                                const SizedBox(height: 16),
+                                _buildQuickActions(context),
+                                const SizedBox(height: 20),
                                 BudgetCard(
                                   spent: currentMonthTotal,
                                   monthlyRecurring: monthlyRecurring,
                                 ),
-                                const SizedBox(height: 24),
+                                const SizedBox(height: 20),
                                 _buildExpenseTrend(expenseProvider),
-                                const SizedBox(height: 24),
+                                const SizedBox(height: 20),
                                 _buildRecentExpensesHeader(),
                               ],
                             ),
@@ -443,7 +457,7 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
                         ),
                         _buildExpensesList(expenses),
                         const SliverPadding(
-                            padding: EdgeInsets.only(bottom: 80)),
+                            padding: EdgeInsets.only(bottom: 96)),
                       ],
                     ),
         ),
@@ -526,15 +540,212 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Current Month Expenses by Category',
-          style: Theme.of(context).textTheme.titleMedium,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Insights',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            Row(
+              children: const [
+                Icon(Icons.pie_chart_rounded, size: 18),
+                SizedBox(width: 6),
+                Text('Monthly breakdown'),
+              ],
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         ExpenseChart(
           expenseData: expenseProvider.getCurrentMonthExpensesByCategory(),
         ),
       ],
+    );
+  }
+
+  Widget _buildHeroHeader({
+    required String fullName,
+    required double spent,
+    required double recurring,
+    required double budget,
+  }) {
+    final remaining = budget - spent;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: AppTheme.primaryGradient,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.18),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Hey ${fullName.split(' ').first}',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: Colors.white,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Let’s keep spending intentional.',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: Colors.white70),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.16),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.blur_on_rounded, color: Colors.white),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              _heroStat(
+                label: 'Spent this month',
+                value: 'NPR ${spent.toStringAsFixed(0)}',
+                color: Colors.white,
+              ),
+              const SizedBox(width: 16),
+              _heroStat(
+                label: 'Remaining',
+                value: 'NPR ${remaining.toStringAsFixed(0)}',
+                color: remaining >= 0 ? Colors.white : AppTheme.accentColor,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _pillTag(Icons.repeat_rounded,
+                  'Recurring: NPR ${recurring.toStringAsFixed(0)}'),
+              _pillTag(Icons.account_balance_wallet_rounded,
+                  'Budget: NPR ${budget.toStringAsFixed(0)}'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _heroStat(
+      {required String label, required String value, required Color color}) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.14),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.15)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label,
+                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _pillTag(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.18)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: Colors.white),
+          const SizedBox(width: 8),
+          Text(text,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    final cards = [
+      _QuickAction(
+        icon: Icons.add_circle_outline,
+        label: 'Expense',
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
+          );
+        },
+        color: AppTheme.primaryColor,
+      ),
+      _QuickAction(
+        icon: Icons.swap_horiz_rounded,
+        label: 'Settlement',
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const AddSettlementScreen()),
+          );
+        },
+        color: AppTheme.secondaryColor,
+      ),
+      _QuickAction(
+        icon: Icons.groups_2_rounded,
+        label: 'Groups',
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const GroupsScreen()),
+          );
+        },
+        color: AppTheme.accentColor,
+      ),
+    ];
+
+    return Row(
+      children: cards
+          .map((card) => Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: card,
+                ),
+              ))
+          .toList(),
     );
   }
 
@@ -657,6 +868,66 @@ class _EmptyExpensesView extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color color;
+
+  const _QuickAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: BoxDecoration(
+          gradient:
+              isDark ? AppTheme.glassGradientDark : AppTheme.glassGradientLight,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withOpacity(0.08)
+                : Colors.white.withOpacity(0.6),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.20),
+              blurRadius: 16,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color.withOpacity(0.14),
+              ),
+              child: Icon(icon, color: color, size: 18),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ],
+        ),
       ),
     );
   }

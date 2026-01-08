@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_finance_app/theme/app_theme.dart';
 
 enum ButtonVariant { filled, outlined }
 
@@ -22,21 +23,12 @@ class CustomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final buttonStyle = variant == ButtonVariant.filled
-        ? ElevatedButton.styleFrom(
-            padding: const EdgeInsets.all(16),
-            minimumSize: const Size(0, 0),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          )
-        : OutlinedButton.styleFrom(
-            padding: const EdgeInsets.all(16),
-            minimumSize: const Size(0, 0),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          );
+    final borderRadius = BorderRadius.circular(16);
+    final gradient = const LinearGradient(
+      colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
 
     final child = isLoading
         ? SizedBox(
@@ -50,26 +42,51 @@ class CustomButton extends StatelessWidget {
             ),
           )
         : icon != null
-        ? Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [Icon(icon), const SizedBox(width: 8), Text(text)],
-          )
-        : Text(text);
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 18),
+                  const SizedBox(width: 8),
+                  Text(text),
+                ],
+              )
+            : Text(text);
 
-    Widget button;
-    if (variant == ButtonVariant.filled) {
-      button = ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: buttonStyle,
-        child: child,
-      );
-    } else {
-      button = OutlinedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: buttonStyle,
-        child: child,
-      );
-    }
+    Widget button = ElevatedButton(
+      onPressed: isLoading ? null : onPressed,
+      style: ElevatedButton.styleFrom(
+        elevation: 0,
+        padding: EdgeInsets.zero,
+        backgroundColor: variant == ButtonVariant.filled
+            ? Colors.transparent
+            : Colors.white.withOpacity(0.04),
+        foregroundColor: variant == ButtonVariant.filled
+            ? Colors.white
+            : Theme.of(context).colorScheme.primary,
+        shadowColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: borderRadius,
+          side: variant == ButtonVariant.outlined
+              ? BorderSide(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
+                  width: 1.2,
+                )
+              : BorderSide.none,
+        ),
+        textStyle: Theme.of(context).textTheme.labelLarge,
+      ),
+      child: Ink(
+        decoration: BoxDecoration(
+          gradient: variant == ButtonVariant.filled ? gradient : null,
+          borderRadius: borderRadius,
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          alignment: Alignment.center,
+          child: child,
+        ),
+      ),
+    );
 
     return fullWidth ? SizedBox(width: double.infinity, child: button) : button;
   }

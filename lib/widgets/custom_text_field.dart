@@ -36,6 +36,12 @@ class CustomTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(18),
+      borderSide:
+          BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.3)),
+    );
+
     return TextFormField(
       controller: controller,
       decoration: InputDecoration(
@@ -43,8 +49,9 @@ class CustomTextField extends StatelessWidget {
         hintText: hint,
         prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
         suffixIcon: suffixIcon,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        border: border,
       ),
+      style: Theme.of(context).textTheme.bodyLarge,
       obscureText: obscureText,
       keyboardType: keyboardType,
       validator: validator,

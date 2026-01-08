@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_finance_app/providers/budget_provider.dart';
+import 'package:flutter_finance_app/theme/app_theme.dart';
 import 'package:flutter_finance_app/screens/budget/budget_setting_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -25,7 +26,7 @@ class BudgetCard extends StatelessWidget {
     final double budgetUsedPercentage = budgetAmount > 0
         ? (totalExpenses / budgetAmount * 100).clamp(0.0, 200.0)
         : 0.0;
-        
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
@@ -38,24 +39,27 @@ class BudgetCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 8.0),
         decoration: BoxDecoration(
+          gradient:
+              isDark ? AppTheme.glassGradientDark : AppTheme.glassGradientLight,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isDark ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.5),
+            color: isDark
+                ? Colors.white.withOpacity(0.08)
+                : Colors.white.withOpacity(0.6),
             width: 1,
           ),
-          color: isDark ? Colors.black.withOpacity(0.3) : Colors.white.withOpacity(0.6),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
             child: Padding(
               padding: const EdgeInsets.all(20.0),
               child: Column(
@@ -69,10 +73,13 @@ class BudgetCard extends StatelessWidget {
                         children: [
                           Text(
                             'Monthly Budget',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -82,10 +89,13 @@ class BudgetCard extends StatelessWidget {
                         ],
                       ),
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.12),
+                          shape: BoxShape.circle,
                         ),
                         child: Icon(
                           Icons.account_balance_wallet_rounded,
@@ -98,7 +108,10 @@ class BudgetCard extends StatelessWidget {
                   if (budgetProvider.isLoading)
                     const Center(child: CircularProgressIndicator())
                   else if (currentBudget == null)
-                    const Text('Set your monthly budget to track expenses')
+                    Text(
+                      'Set your monthly budget to track expenses',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    )
                   else
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,30 +121,43 @@ class BudgetCard extends StatelessWidget {
                           children: [
                             Text(
                               '${budgetUsedPercentage.toStringAsFixed(0)}%',
-                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: remainingBudget >= 0 
-                                    ? Theme.of(context).colorScheme.primary 
-                                    : Theme.of(context).colorScheme.error,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .displaySmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: remainingBudget >= 0
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Theme.of(context).colorScheme.error,
+                                  ),
                             ),
                             Text(
                               'of ${budgetProvider.formatAmountNPR(budgetAmount)}',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Theme.of(context).textTheme.bodySmall?.color,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.color,
+                                  ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
                           child: LinearProgressIndicator(
                             value: budgetUsedPercentage / 100,
-                            backgroundColor: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[200],
-                            color: remainingBudget >= 0 
-                                ? Theme.of(context).colorScheme.primary 
-                                : Theme.of(context).colorScheme.error,
+                            backgroundColor: isDark
+                                ? Colors.white.withOpacity(0.1)
+                                : Colors.white.withOpacity(0.5),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              remainingBudget >= 0
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).colorScheme.error,
+                            ),
                             minHeight: 12,
                           ),
                         ),
@@ -140,39 +166,62 @@ class BudgetCard extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             _buildBudgetInfoItem(
-                              context, 
-                              'Spent', 
+                              context,
+                              'Spent',
                               budgetProvider.formatAmountNPR(totalExpenses),
                               isDark,
                             ),
                             _buildBudgetInfoItem(
-                              context, 
-                              'Remaining', 
+                              context,
+                              'Remaining',
                               budgetProvider.formatAmountNPR(remainingBudget),
                               isDark,
-                              valueColor: remainingBudget >= 0 
-                                  ? Theme.of(context).colorScheme.primary 
+                              valueColor: remainingBudget >= 0
+                                  ? Theme.of(context).colorScheme.primary
                                   : Theme.of(context).colorScheme.error,
                             ),
                           ],
                         ),
+                        const SizedBox(height: 12),
+                        if (monthlyRecurring != null && monthlyRecurring! > 0)
+                          Row(
+                            children: [
+                              Icon(Icons.repeat_rounded,
+                                  size: 16,
+                                  color:
+                                      Theme.of(context).colorScheme.secondary),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Recurring: ${budgetProvider.formatAmountNPR(monthlyRecurring!)}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
                         if (remainingBudget < 0)
                           Padding(
                             padding: const EdgeInsets.only(top: 12.0),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.error.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .error
+                                    .withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(10),
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.warning_amber_rounded, size: 16, color: Theme.of(context).colorScheme.error),
+                                  Icon(Icons.warning_amber_rounded,
+                                      size: 16,
+                                      color:
+                                          Theme.of(context).colorScheme.error),
                                   const SizedBox(width: 8),
                                   Text(
                                     'Budget exceeded!',
                                     style: TextStyle(
-                                      color: Theme.of(context).colorScheme.error,
+                                      color:
+                                          Theme.of(context).colorScheme.error,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
                                     ),
@@ -192,7 +241,9 @@ class BudgetCard extends StatelessWidget {
     );
   }
 
-  Widget _buildBudgetInfoItem(BuildContext context, String label, String value, bool isDark, {Color? valueColor}) {
+  Widget _buildBudgetInfoItem(
+      BuildContext context, String label, String value, bool isDark,
+      {Color? valueColor}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -204,9 +255,9 @@ class BudgetCard extends StatelessWidget {
         Text(
           value,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: valueColor,
-          ),
+                fontWeight: FontWeight.bold,
+                color: valueColor,
+              ),
         ),
       ],
     );
